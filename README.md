@@ -157,6 +157,22 @@ Ready-to-test binaries are pre-compiled and packaged inside the [`dist-bin/`](fi
 - **Rust toolchain** (1.75+ or 1.89+ GNU/MSVC)
 - **Node.js** (v18+ or v22+) & `npm`
 
+### 4.0 Ready-to-Run Binaries (`dist-bin/`)
+Pre-compiled standalone binaries are ready for immediate testing in [`dist-bin/`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin):
+
+- **Windows Desktop Standalone**:
+  - Direct executable: [`dist-bin/Beam-win32-x64/Beam.exe`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin/Beam-win32-x64/Beam.exe)
+  - Portable Zip archive: [`dist-bin/Beam-Desktop-Windows-x64.zip`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin/Beam-Desktop-Windows-x64.zip) (139 MB)
+  - Built with relative asset loading (`./assets/...`) ensuring zero blank/black screens on startup.
+
+- **Android Mobile App (`Beam-Mobile.apk`)**:
+  - File: [`dist-bin/Beam-Mobile.apk`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin/Beam-Mobile.apk) (7.5 MB)
+  - Full APK Signature Scheme v2 & v3 with 4-byte `zipalign` (resolves "Package is invalid" parsing errors on modern Android 11–15).
+  - Loads Beam Mobile touch UI with radar scanner, QR connection, and auto-sync.
+
+- **Rust High-Performance CLI Engine**:
+  - Binary: [`dist-bin/beam-cli.exe`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin/beam-cli.exe) (7.5 MB)
+
 ### 4.1 Running the Rust Core & CLI
 ```bash
 # Navigate to the Rust core
