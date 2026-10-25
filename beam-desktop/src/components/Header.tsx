@@ -1,5 +1,4 @@
-import React from 'react';
-import { Wifi, Usb, Zap, QrCode, Clipboard, History, Settings, Smartphone, Monitor } from 'lucide-react';
+import { Wifi, Usb, Zap, QrCode, Clipboard, History, Settings, Smartphone, Monitor, Folder } from 'lucide-react';
 import { Device } from '../types';
 
 interface HeaderProps {
@@ -8,7 +7,9 @@ interface HeaderProps {
   onOpenClipboard: () => void;
   onOpenHistory: () => void;
   onOpenBackup: () => void;
+  onOpenFolder?: () => void;
   clipboardCount: number;
+  localIp?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,7 +18,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenClipboard,
   onOpenHistory,
   onOpenBackup,
+  onOpenFolder,
   clipboardCount,
+  localIp,
 }) => {
   return (
     <header className="h-16 px-6 border-b border-white/5 flex items-center justify-between glass-panel-subtle sticky top-0 z-30">
@@ -62,14 +65,25 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         ) : (
           <div className="glass-pill px-3 py-1.5 rounded-full flex items-center space-x-2 text-xs text-slate-400">
-            <Wifi className="w-3.5 h-3.5 text-slate-500 animate-pulse" />
-            <span>LAN Standby · Awaiting peer</span>
+            <Wifi className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+            <span>LAN Server Ready · <span className="text-purple-300 font-mono font-semibold">{localIp || '10.50.4.92'}:53317</span></span>
           </div>
         )}
       </div>
 
       {/* Action Buttons */}
       <div className="flex items-center space-x-2">
+        {onOpenFolder && (
+          <button
+            onClick={onOpenFolder}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 transition-all hover:scale-105 active:scale-95"
+            title="Open Received Files Folder (Downloads/Beam)"
+          >
+            <Folder className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Received Files</span>
+          </button>
+        )}
+
         <button
           onClick={onOpenPairing}
           className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 border border-purple-500/30 transition-all hover:scale-105 active:scale-95"

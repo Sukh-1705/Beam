@@ -102,9 +102,25 @@ export const PairingModal: React.FC<PairingModalProps> = ({
             <p className="text-xs text-slate-300 font-medium">
               Open <span className="text-purple-300 font-semibold">Beam</span> on your phone and tap the scanner
             </p>
-            <div className="flex items-center space-x-2 mt-2 text-[11px] font-mono text-slate-400">
-              <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-              <span>IP: {ipAddress}:{port}</span>
+            <div className="flex flex-col items-center space-y-1 mt-3">
+              <div className="flex items-center space-x-2 text-xs font-mono text-slate-300 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
+                <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+                <span>http://{ipAddress}:{port}</span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`http://${ipAddress}:${port}`);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  className="ml-1 text-slate-400 hover:text-white"
+                  title="Copy URL"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400">
+                Open in <span className="text-white font-medium">Beam Mobile APK</span> or any mobile browser on the same Wi-Fi
+              </p>
             </div>
           </div>
         ) : (
