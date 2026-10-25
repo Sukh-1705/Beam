@@ -138,7 +138,20 @@ Beam/
 
 ---
 
-## 4. Build & Run Instructions
+## 4. Pre-Built Standalone Binaries (`dist-bin/`)
+
+Ready-to-test binaries are pre-compiled and packaged inside the [`dist-bin/`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin) directory:
+
+| Binary Artifact | Platform | Type | Location |
+| :--- | :--- | :--- | :--- |
+| **`Beam.exe`** | Windows (x64) | Full GUI Desktop Standalone Application | [`dist-bin/Beam-win32-x64/Beam.exe`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin/Beam-win32-x64/Beam.exe) |
+| **`Beam-Desktop-Windows-x64.zip`** | Windows (x64) | Portable GUI Desktop Archive | [`dist-bin/Beam-Desktop-Windows-x64.zip`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin/Beam-Desktop-Windows-x64.zip) |
+| **`beam-cli.exe`** | Windows (x64) | High-Performance Native Rust CLI | [`dist-bin/beam-cli.exe`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin/beam-cli.exe) |
+| **`Beam-Mobile.apk`** | Android (ARM64/Universal) | Signed Native Android Package | [`dist-bin/Beam-Mobile.apk`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin/Beam-Mobile.apk) |
+
+---
+
+## 5. Build & Run Instructions
 
 ### Prerequisites
 - **Rust toolchain** (1.75+ or 1.89+ GNU/MSVC)
