@@ -1,0 +1,22 @@
+# Rust build artifacts
+target/
+**/*.rs.bk
+Cargo.lock
+
+# Node.js dependencies & builds
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Beam temporary data & local databases
+.beam/
+*.beam_part
+*.db
+*.db-journal
+
+# OS files
+.DS_Store
+Thumbs.db

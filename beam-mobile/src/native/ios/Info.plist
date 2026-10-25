@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>Beam</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.beam.transfer</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+
+    <!-- Just-In-Time Local Network Permission -->
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Beam uses the local Wi-Fi network to discover and transfer files directly to your PC at link-saturating speeds without internet.</string>
+
+    <!-- Bonjour Service for mDNS Discovery -->
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_beam._tcp</string>
+        <string>_beam._udp</string>
+    </array>
+
+    <!-- PhotoKit Lossless Archival -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Beam requires photo library access to transfer your original RAW photos, Live Photos, and 4K videos to your PC without recompression or quality loss.</string>
+
+    <!-- Background Modes -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>processing</string>
+        <string>fetch</string>
+    </array>
+
+    <key>BGTaskSchedulerPermittedIdentifiers</key>
+    <array>
+        <string>com.beam.transfer.processing</string>
+    </array>
+</dict>
+</plist>
