@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ BEAM
+# BEAM
 
 **Flagship Lossless Cross-Device Transfer Suite**  
 *Instant, byte-for-byte lossless local streaming between Mobile and PC with cryptographic verification.*
@@ -17,7 +17,7 @@
 
 ---
 
-## 🌟 Executive Summary
+## Executive Summary
 
 **Beam** is a two-part flagship data streaming product engineered to transfer files between mobile devices (Android & iOS) and computers (Windows, macOS, Linux) seamlessly, instantly, and with **zero data loss**:
 
@@ -29,7 +29,7 @@
 
 ---
 
-## 📐 Architecture
+## Architecture
 
 ```mermaid
 graph TD
@@ -71,32 +71,32 @@ graph TD
 
 ---
 
-## 🚀 Key Capabilities
+## Key Capabilities
 
-### 1. 🛡️ Byte-for-Byte Lossless Streaming
+### 1. Byte-for-Byte Lossless Streaming
 * **Zero Compression:** Whether transferring a 60MB Sony `.ARW` RAW file, an iPhone `.HEIC` Live Photo, or a 75GB 4K `.mov` video, data is piped unmodified.
 * **Metadata & Timestamp Preservation:** Preserves original creation dates, last-modified timestamps, and camera EXIF structures.
-* **Verification Badge:** When a file finishes transferring, cryptographic checksums are matched on both devices to confirm `"✓ Verified Identical"`.
+* **Verification Badge:** When a file finishes transferring, cryptographic checksums are matched on both devices to confirm `"Verified Identical"`.
 
-### 2. ⚡ High-Throughput & Constant Memory Footprint
+### 2. High-Throughput & Constant Memory Footprint
 * **Direct Socket Streaming:** Chunks are read and written directly to the filesystem via streaming buffers, preventing memory exhaustion when transferring multi-gigabyte files.
 * **Real-Time Speedometer:** Displays active throughput in MB/s, transferred bytes vs total bytes, and precise ETA countdown.
 
-### 3. 🌐 University & Public Wi-Fi Bypass
+### 3. University & Public Wi-Fi Bypass
 Campus and corporate Wi-Fi access points frequently enable **AP Client Isolation**, which blocks devices on the same Wi-Fi from talking to each other.
 * **The Solution:** Beam includes dedicated **Hotspot Link Mode**. Turn on your phone's Personal Hotspot, connect your computer, and Beam streams directly across the local subnet with zero firewall blocks or configuration.
 
-### 4. 📋 Universal Mirrored Clipboard
+### 4. Universal Mirrored Clipboard
 * Instantly sync text, verification codes, URLs, and code snippets between phone and PC with one tap.
 * 100% local over LAN; no third-party cloud servers or clip-logging services.
 
-### 5. 📂 Remote Storage Explorer & Auto-Archival
+### 5. Remote Storage Explorer & Auto-Archival
 * Browse your phone's Camera, Downloads, and Documents folders directly from your PC monitor with one-click download.
 * Optional automated backup synchronizes new camera photos to PC storage whenever paired.
 
 ---
 
-## 📦 Distribution Packages
+## Distribution Packages
 
 | Platform | Package | Architecture | Description |
 | :--- | :--- | :--- | :--- |
@@ -106,7 +106,7 @@ Campus and corporate Wi-Fi access points frequently enable **AP Client Isolation
 
 ---
 
-## 🛠️ Quickstart Guide
+## Quickstart Guide
 
 ### Option A: Using Pre-Built Binaries
 
@@ -122,7 +122,7 @@ Campus and corporate Wi-Fi access points frequently enable **AP Client Isolation
 4. Tap **Connect to <IP>:<PORT>** (or switch to **Scan QR Code** to scan your desktop screen).
 5. Once the green **"Connected to PC!"** badge appears, you're ready to stream files.
 
-> **💡 Campus Wi-Fi Note:** If you are on university or institutional Wi-Fi, turn on your phone's **Personal Hotspot**, connect your computer to it, and pair. Beam will automatically stream over the direct hotspot connection at maximum speed.
+> **Campus Wi-Fi Note:** If you are on university or institutional Wi-Fi, turn on your phone's **Personal Hotspot**, connect your computer to it, and pair. Beam will automatically stream over the direct hotspot connection at maximum speed.
 
 ---
 
@@ -158,7 +158,7 @@ The compiled, zip-aligned, and debug-signed APK will be output to `dist-bin/Beam
 
 ---
 
-## 🔬 Protocol & REST API Reference
+## Protocol & REST API Reference
 
 Beam Desktop exposes an internal, non-blocking HTTP/1.1 API on port `53317`:
 
@@ -213,7 +213,7 @@ Streams a staged file from desktop to mobile with support for resume and chunk r
 
 ---
 
-## 🔒 Security & Privacy Invariants
+## Security & Privacy Invariants
 
 1. **100% Local-First:** No accounts, no telemetry, no analytics, and zero external cloud servers. Data never leaves your physical local network.
 2. **Deterministic Cryptographic Verification:** Protects against bit-rot, truncated network packets, and dropped TCP chunks by recalculating hashes upon disk flush.
@@ -221,7 +221,7 @@ Streams a staged file from desktop to mobile with support for resume and chunk r
 
 ---
 
-## 📄 License
+## License
 
 Dual-licensed under either:
 * **MIT License** ([LICENSE-MIT](LICENSE-MIT))
