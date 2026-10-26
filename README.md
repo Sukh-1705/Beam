@@ -98,11 +98,11 @@ Campus and corporate Wi-Fi access points frequently enable **AP Client Isolation
 
 ## Distribution Packages
 
-| Platform | Package | Architecture | Description |
+| Platform | Package | Architecture | Direct Download |
 | :--- | :--- | :--- | :--- |
-| **Android** | `Beam-Mobile.apk` | Universal (ARM64 / x86_64) | Signed Android standalone application with full MediaStore access and camera QR scanner |
-| **Windows** | `Beam-Desktop-Windows.zip` | x64 (Windows 10/11) | Portable desktop bundle with native streaming daemon and single-instance process lock |
-| **Cross-Platform** | Web Client | Chrome / Safari / Edge | Progressive web interface accessible via `http://<PC_IP>:53317` on any browser |
+| **Android** | Standalone APK | Universal (ARM64 / x86_64) | [**Download Beam-Mobile.apk**](https://github.com/Sukh-1705/Beam/releases/download/v1.0.0/Beam-Mobile.apk) |
+| **Windows** | Portable x64 Bundle | x64 (Windows 10 / 11) | [**Download Beam-Desktop-Windows-x64.zip**](https://github.com/Sukh-1705/Beam/releases/download/v1.0.0/Beam-Desktop-Windows-x64.zip) |
+| **Cross-Platform** | Web Client | Chrome / Safari / Edge | Stream via `http://<PC_IP>:53317` on any browser |
 
 ---
 
