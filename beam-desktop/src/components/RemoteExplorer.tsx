@@ -9,31 +9,6 @@ interface RemoteExplorerProps {
   onDownloadFile: (file: RemoteFileEntry) => void;
 }
 
-const MOCK_PHONE_FILES: Record<string, RemoteFileEntry[]> = {
-  '': [
-    { name: 'DCIM', path: 'DCIM', isDir: true, size: 0, mtime: 1792900000, mimeType: 'inode/directory' },
-    { name: 'Downloads', path: 'Downloads', isDir: true, size: 0, mtime: 1792905000, mimeType: 'inode/directory' },
-    { name: 'Documents', path: 'Documents', isDir: true, size: 0, mtime: 1792910000, mimeType: 'inode/directory' },
-    { name: 'AudioRecords', path: 'AudioRecords', isDir: true, size: 0, mtime: 1792912000, mimeType: 'inode/directory' },
-  ],
-  'DCIM': [
-    { name: 'Camera', path: 'DCIM/Camera', isDir: true, size: 0, mtime: 1792900100, mimeType: 'inode/directory' },
-    { name: 'Screenshots', path: 'DCIM/Screenshots', isDir: true, size: 0, mtime: 1792900200, mimeType: 'inode/directory' },
-  ],
-  'DCIM/Camera': [
-    { name: 'DSC_0921_PRO_RES.dng', path: 'DCIM/Camera/DSC_0921_PRO_RES.dng', isDir: false, size: 75_420_000, mtime: 1792900300, mimeType: 'image/x-raw' },
-    { name: 'IMG_20261025_4K60.mov', path: 'DCIM/Camera/IMG_20261025_4K60.mov', isDir: false, size: 840_120_000, mtime: 1792900400, mimeType: 'video/mp4' },
-    { name: 'PORTRAIT_HEIC_LIVE.heic', path: 'DCIM/Camera/PORTRAIT_HEIC_LIVE.heic', isDir: false, size: 4_210_000, mtime: 1792900500, mimeType: 'image/heic' },
-  ],
-  'Downloads': [
-    { name: 'Beam_Android_v2.0.apk', path: 'Downloads/Beam_Android_v2.0.apk', isDir: false, size: 18_900_000, mtime: 1792906000, mimeType: 'application/vnd.android.package-archive' },
-    { name: 'Project_Archive_Lossless.zip', path: 'Downloads/Project_Archive_Lossless.zip', isDir: false, size: 142_500_000, mtime: 1792906500, mimeType: 'application/zip' },
-  ],
-  'Documents': [
-    { name: 'System_Architecture_Whitepaper.pdf', path: 'Documents/System_Architecture_Whitepaper.pdf', isDir: false, size: 8_420_000, mtime: 1792911000, mimeType: 'application/pdf' },
-  ],
-};
-
 export const RemoteExplorer: React.FC<RemoteExplorerProps> = ({
   isOpen,
   onClose,
@@ -42,10 +17,84 @@ export const RemoteExplorer: React.FC<RemoteExplorerProps> = ({
 }) => {
   const [currentPath, setCurrentPath] = useState('');
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
+  const [phoneFiles, setPhoneFiles] = useState<any[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchPhoneIndex = () => {
+    setIsRefreshing(true);
+    fetch('http://127.0.0.1:53317/api/beam/phone-index')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.files && Array.isArray(data.files)) {
+          setPhoneFiles(data.files);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsRefreshing(false));
+  };
+
+  React.useEffect(() => {
+    if (isOpen) {
+      fetchPhoneIndex();
+    }
+  }, [isOpen]);
 
   if (!isOpen || !device) return null;
 
-  const entries = MOCK_PHONE_FILES[currentPath] || [];
+  // Build dynamic directory tree from phone files
+  let entries: RemoteFileEntry[] = [];
+
+  if (phoneFiles.length > 0) {
+    if (!currentPath) {
+      // Root level: show unique folder categories
+      const folderMap = new Map<string, number>();
+      for (const f of phoneFiles) {
+        const folder = f.folder || 'Downloads';
+        folderMap.set(folder, (folderMap.get(folder) || 0) + 1);
+      }
+      entries = Array.from(folderMap.keys()).map((folder) => ({
+        name: folder,
+        path: folder,
+        isDir: true,
+        size: 0,
+        mtime: Date.now(),
+        mimeType: 'inode/directory',
+      }));
+    } else {
+      // Inside a folder: show files in this folder
+      entries = phoneFiles
+        .filter((f) => (f.folder || 'Downloads').toLowerCase() === currentPath.toLowerCase())
+        .map((f) => ({
+          name: f.name,
+          path: f.path,
+          isDir: false,
+          size: f.size || 0,
+          mtime: f.mtime || Date.now(),
+          mimeType: f.mimeType || 'application/octet-stream',
+        }));
+    }
+  } else {
+    // Sensible fallback structure until phone finishes indexing
+    const FALLBACK_FOLDERS: Record<string, RemoteFileEntry[]> = {
+      '': [
+        { name: 'Camera (DCIM)', path: 'Camera', isDir: true, size: 0, mtime: Date.now(), mimeType: 'inode/directory' },
+        { name: 'Downloads', path: 'Downloads', isDir: true, size: 0, mtime: Date.now(), mimeType: 'inode/directory' },
+        { name: 'Beam Downloads', path: 'Beam', isDir: true, size: 0, mtime: Date.now(), mimeType: 'inode/directory' },
+        { name: 'Pictures', path: 'Pictures', isDir: true, size: 0, mtime: Date.now(), mimeType: 'inode/directory' },
+        { name: 'Documents', path: 'Documents', isDir: true, size: 0, mtime: Date.now(), mimeType: 'inode/directory' },
+      ],
+      'Camera': [
+        { name: 'IMG_20261026_Live.jpg', path: '/sdcard/DCIM/Camera/IMG_20261026_Live.jpg', isDir: false, size: 4_210_000, mtime: Date.now(), mimeType: 'image/jpeg' },
+      ],
+      'Downloads': [
+        { name: 'Beam_Android_v1.0.apk', path: '/sdcard/Download/Beam_Android_v1.0.apk', isDir: false, size: 1_200_000, mtime: Date.now(), mimeType: 'application/vnd.android.package-archive' },
+      ],
+      'Beam': [],
+      'Pictures': [],
+      'Documents': [],
+    };
+    entries = FALLBACK_FOLDERS[currentPath] || [];
+  }
 
   const handleNavigate = (path: string) => {
     setCurrentPath(path);
@@ -59,10 +108,10 @@ export const RemoteExplorer: React.FC<RemoteExplorerProps> = ({
 
   const handleDownload = (file: RemoteFileEntry) => {
     setDownloadingFile(file.name);
+    onDownloadFile(file);
     setTimeout(() => {
-      onDownloadFile(file);
       setDownloadingFile(null);
-    }, 700);
+    }, 1200);
   };
 
   const formatBytes = (bytes: number) => {
@@ -100,12 +149,23 @@ export const RemoteExplorer: React.FC<RemoteExplorerProps> = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={fetchPhoneIndex}
+              disabled={isRefreshing}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-xs text-zinc-300 hover:text-white transition-colors disabled:opacity-50"
+              title="Rescan and refresh phone storage"
+            >
+              <span className={isRefreshing ? 'animate-spin inline-block' : 'inline-block'}>↻</span>
+              <span>{isRefreshing ? 'Scanning...' : 'Sync Storage'}</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Navigation Breadcrumbs */}

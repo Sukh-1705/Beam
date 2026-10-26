@@ -78,6 +78,7 @@ export const App: React.FC = () => {
           // Auto-handshake device info
           fetch(`http://${pcIp}:${pcPort}/api/beam/pair`, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               id: 'mobile-android-client',
               name: navigator.userAgent.includes('Android') ? 'Android Phone' : 'Mobile Phone',
@@ -87,6 +88,61 @@ export const App: React.FC = () => {
               port: 53318,
             }),
           }).catch(() => {});
+
+          // Sync real phone files index to PC for "Explore Android Phone"
+          if ((window as any).BeamNative?.getDeviceFiles) {
+            try {
+              const filesJson = (window as any).BeamNative.getDeviceFiles();
+              if (filesJson && filesJson.length > 2) {
+                fetch(`http://${pcIp}:${pcPort}/api/beam/phone-index`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: filesJson,
+                }).catch(() => {});
+              }
+            } catch (e) {}
+          }
+
+          // Check if PC requested to download a phone file
+          fetch(`http://${pcIp}:${pcPort}/api/beam/pending-phone-downloads`)
+            .then(r => r.json())
+            .then(async (reqData) => {
+              if (reqData.requests && reqData.requests.length > 0 && (window as any).BeamNative?.readFileAsBase64) {
+                for (const pullReq of reqData.requests) {
+                  try {
+                    const base64Data = (window as any).BeamNative.readFileAsBase64(pullReq.path);
+                    if (base64Data) {
+                      const byteChars = atob(base64Data);
+                      const byteNums = new Array(byteChars.length);
+                      for (let i = 0; i < byteChars.length; i++) {
+                        byteNums[i] = byteChars.charCodeAt(i);
+                      }
+                      const byteArray = new Uint8Array(byteNums);
+                      const fileBlob = new Blob([byteArray]);
+
+                      await fetch(`http://${pcIp}:${pcPort}/api/beam/upload`, {
+                        method: 'POST',
+                        headers: {
+                          'X-File-Name': encodeURIComponent(pullReq.name),
+                          'X-Device-Name': encodeURIComponent('Android Phone'),
+                        },
+                        body: fileBlob,
+                      });
+
+                      // Acknowledge completed download
+                      await fetch(`http://${pcIp}:${pcPort}/api/beam/clear-phone-download`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: pullReq.id, filePath: pullReq.path }),
+                      });
+                    }
+                  } catch (pullErr) {
+                    console.warn('Failed streaming file to PC:', pullErr);
+                  }
+                }
+              }
+            })
+            .catch(() => {});
 
           // Check for staged files from PC to download
           if (data.pendingFiles && data.pendingFiles.length > 0) {
@@ -227,15 +283,50 @@ export const App: React.FC = () => {
     }
   };
 
-  // Download a staged file from the PC
-  const handleDownloadFromPc = (item: any) => {
+  // Download a staged file from the PC into mobile's Downloads/Beam folder
+  const handleDownloadFromPc = async (item: any) => {
     const downloadUrl = `http://${pcIp}:${pcPort}/api/beam/download/${item.id}`;
-    const a = document.createElement('a');
-    a.href = downloadUrl;
-    a.download = item.fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+
+    // Priority 1: Use native Android downloader to save directly into Downloads/Beam
+    if ((window as any).BeamNative?.downloadUrlToBeam) {
+      try {
+        (window as any).BeamNative.downloadUrlToBeam(downloadUrl, item.fileName);
+      } catch (e) {
+        console.warn('Native downloadUrlToBeam failed:', e);
+      }
+    } else {
+      // Priority 2: In browser or fallback WebView
+      try {
+        const resp = await fetch(downloadUrl);
+        const blob = await resp.blob();
+
+        if ((window as any).BeamNative?.saveFileToBeam) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64 = (reader.result as string).split(',')[1];
+            (window as any).BeamNative.saveFileToBeam(item.fileName, base64);
+          };
+          reader.readAsDataURL(blob);
+        } else {
+          const blobUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = item.fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(blobUrl);
+        }
+      } catch (err) {
+        // Fallback standard download
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = item.fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    }
 
     const newRecent: MobileRecentTransfer = {
       id: Date.now().toString(),
@@ -460,6 +551,8 @@ export const App: React.FC = () => {
         isOpen={isClipboardOpen}
         onClose={() => setIsClipboardOpen(false)}
         targetPCName={pcName}
+        pcIp={pcIp}
+        pcPort={pcPort}
       />
     </div>
   );

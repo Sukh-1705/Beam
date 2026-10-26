@@ -41,9 +41,27 @@ export const ClipboardSync: React.FC<ClipboardSyncProps> = ({
   onToggle,
   onSendText,
 }) => {
-  const [items, setItems] = useState<ClipboardItem[]>(INITIAL_CLIPBOARD_ITEMS);
+  const [items, setItems] = useState<ClipboardItem[]>([]);
   const [inputText, setInputText] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Poll real clipboard items from Beam daemon
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const fetchClipboard = () => {
+      fetch('http://127.0.0.1:53317/api/beam/clipboard')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.history && Array.isArray(data.history)) {
+            setItems(data.history);
+          }
+        })
+        .catch(() => {});
+    };
+    fetchClipboard();
+    const interval = setInterval(fetchClipboard, 1500);
+    return () => clearInterval(interval);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -55,16 +73,7 @@ export const ClipboardSync: React.FC<ClipboardSyncProps> = ({
 
   const handleSend = () => {
     if (!inputText.trim()) return;
-    const isUrl = inputText.startsWith('http://') || inputText.startsWith('https://');
-    const newItem: ClipboardItem = {
-      id: Date.now().toString(),
-      type: isUrl ? 'link' : 'text',
-      content: inputText,
-      timestamp: 'Just now',
-      source: 'Workstation',
-    };
-    setItems([newItem, ...items]);
-    onSendText(inputText);
+    onSendText(inputText.trim());
     setInputText('');
   };
 

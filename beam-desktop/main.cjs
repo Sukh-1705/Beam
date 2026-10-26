@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, shell, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, shell, ipcMain, clipboard } = require('electron');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
@@ -57,6 +57,11 @@ if (!fs.existsSync(beamDownloadsDir)) {
 const devicesMap = new Map();
 const transferHistory = [];
 const pendingOutgoing = [];
+let phoneFilesIndex = [];
+let pendingPhoneDownloads = [];
+let clipboardHistory = [
+  { id: '1', text: 'Welcome to Beam Shared Clipboard!', timestamp: Date.now() - 60000, source: 'System' }
+];
 let lastClipboard = { text: 'Welcome to Beam Flagship Transfer!', timestamp: Date.now() };
 
 // Initialize server
@@ -287,7 +292,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 7. Clipboard Sync
+  // 7. Clipboard Sync (Real Bidirectional Electron Clipboard)
   if (pathname === '/api/beam/clipboard') {
     if (req.method === 'POST') {
       let b = '';
@@ -295,9 +300,78 @@ const server = http.createServer((req, res) => {
       req.on('end', () => {
         try {
           const d = JSON.parse(b);
-          lastClipboard = { text: d.text, timestamp: Date.now() };
+          if (d.text && typeof d.text === 'string') {
+            const cleanText = String(d.text).trim();
+            lastClipboard = { text: cleanText, timestamp: Date.now() };
+            const isLink = cleanText.startsWith('http://') || cleanText.startsWith('https://');
+            clipboardHistory.unshift({
+              id: Date.now().toString(),
+              type: isLink ? 'link' : 'text',
+              content: cleanText,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              source: d.source || 'Mobile Phone',
+            });
+            if (clipboardHistory.length > 30) clipboardHistory.pop();
+            try {
+              clipboard.writeText(cleanText);
+              console.log('[Beam Core] Wrote text to Windows clipboard:', cleanText.slice(0, 60));
+            } catch (clipErr) {
+              console.warn('[Beam Core] Clipboard writeText error:', clipErr);
+            }
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('beam:clipboard-updated', lastClipboard);
+            }
+          }
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: true }));
+          res.end(JSON.stringify({ success: true, text: lastClipboard.text, history: clipboardHistory }));
+        } catch (e) {
+          res.writeHead(400);
+          res.end('Invalid JSON');
+        }
+      });
+      return;
+    } else {
+      let currentSysText = '';
+      try {
+        const read = clipboard.readText();
+        if (typeof read === 'string') {
+          currentSysText = read.trim();
+        }
+      } catch (e) {}
+      if (currentSysText && currentSysText !== lastClipboard.text) {
+        lastClipboard = { text: currentSysText, timestamp: Date.now() };
+        const isLink = currentSysText.startsWith('http://') || currentSysText.startsWith('https://');
+        clipboardHistory.unshift({
+          id: Date.now().toString(),
+          type: isLink ? 'link' : 'text',
+          content: currentSysText,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          source: 'Windows Clipboard',
+        });
+        if (clipboardHistory.length > 30) clipboardHistory.pop();
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ text: lastClipboard.text, timestamp: lastClipboard.timestamp, history: clipboardHistory }));
+      return;
+    }
+  }
+
+  // 8. Remote Explorer (Real Android Phone Index & File Download Requests)
+  if (pathname === '/api/beam/phone-index') {
+    if (req.method === 'POST') {
+      let b = '';
+      req.on('data', c => b += c);
+      req.on('end', () => {
+        try {
+          const d = JSON.parse(b);
+          if (Array.isArray(d)) {
+            phoneFilesIndex = d;
+          } else if (Array.isArray(d.files)) {
+            phoneFilesIndex = d.files;
+          }
+          console.log(`[Beam Core] Updated real phone files index (${phoneFilesIndex.length} items)`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, count: phoneFilesIndex.length }));
         } catch (e) {
           res.writeHead(400);
           res.end('Invalid JSON');
@@ -306,9 +380,51 @@ const server = http.createServer((req, res) => {
       return;
     } else {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(lastClipboard));
+      res.end(JSON.stringify({ files: phoneFilesIndex }));
       return;
     }
+  }
+
+  if (pathname === '/api/beam/request-phone-download' && req.method === 'POST') {
+    let b = '';
+    req.on('data', c => b += c);
+    req.on('end', () => {
+      try {
+        const d = JSON.parse(b);
+        const reqItem = { id: Date.now().toString(), filePath: d.filePath, fileName: d.fileName };
+        pendingPhoneDownloads.push(reqItem);
+        console.log(`[Beam Core] Queued phone file pull request: ${d.fileName} (${d.filePath})`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, request: reqItem }));
+      } catch (e) {
+        res.writeHead(400);
+        res.end('Invalid JSON');
+      }
+    });
+    return;
+  }
+
+  if (pathname === '/api/beam/pending-phone-downloads' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ requests: pendingPhoneDownloads }));
+    return;
+  }
+
+  if (pathname === '/api/beam/clear-phone-download' && req.method === 'POST') {
+    let b = '';
+    req.on('data', c => b += c);
+    req.on('end', () => {
+      try {
+        const d = JSON.parse(b);
+        pendingPhoneDownloads = pendingPhoneDownloads.filter(r => r.id !== d.id && r.filePath !== d.filePath);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true }));
+      } catch (e) {
+        res.writeHead(400);
+        res.end('Invalid JSON');
+      }
+    });
+    return;
   }
 
   // 8. Serve Mobile Web UI directly over local network

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import JSZip from 'jszip';
 import { Header } from './components/Header';
 import { DropZone } from './components/DropZone';
 import { DeviceSidebar } from './components/DeviceSidebar';
@@ -93,10 +94,57 @@ export const App: React.FC = () => {
       e.preventDefault();
     };
 
-    const handleDrop = (e: DragEvent) => {
+    const traverseEntry = async (entry: any, currentPath = ''): Promise<File[]> => {
+      const collected: File[] = [];
+      if (entry.isFile) {
+        await new Promise<void>((resolve) => {
+          entry.file((file: File) => {
+            const relPath = currentPath ? `${currentPath}/${file.name}` : file.name;
+            Object.defineProperty(file, 'webkitRelativePath', {
+              value: relPath,
+              writable: true,
+              configurable: true,
+            });
+            collected.push(file);
+            resolve();
+          });
+        });
+      } else if (entry.isDirectory) {
+        const reader = entry.createReader();
+        const entries: any[] = await new Promise((resolve) => {
+          reader.readEntries((ents: any[]) => resolve(ents || []));
+        });
+        const newPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+        for (const child of entries) {
+          const subFiles = await traverseEntry(child, newPath);
+          collected.push(...subFiles);
+        }
+      }
+      return collected;
+    };
+
+    const handleDrop = async (e: DragEvent) => {
       e.preventDefault();
       setIsWindowDragActive(false);
       dragCounter = 0;
+      if (e.dataTransfer && e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+        const allFiles: File[] = [];
+        for (let i = 0; i < e.dataTransfer.items.length; i++) {
+          const item = e.dataTransfer.items[i];
+          const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+          if (entry) {
+            const files = await traverseEntry(entry);
+            allFiles.push(...files);
+          } else {
+            const f = item.getAsFile();
+            if (f) allFiles.push(f);
+          }
+        }
+        if (allFiles.length > 0) {
+          handleFilesSelected(allFiles);
+          return;
+        }
+      }
       if (e.dataTransfer && e.dataTransfer.files.length > 0) {
         handleFilesSelected(Array.from(e.dataTransfer.files));
       }
@@ -115,7 +163,7 @@ export const App: React.FC = () => {
     };
   }, [selectedDevice, devices]);
 
-  // Handle files dropped / selected on Desktop
+  // Handle files dropped / selected on Desktop (Folders zipped as single folder archive)
   const handleFilesSelected = async (files: File[]) => {
     if (files.length === 0) return;
     const target = selectedDevice || (devices.length > 0 ? devices[0] : null);
@@ -125,24 +173,53 @@ export const App: React.FC = () => {
       return;
     }
 
-    const firstFile = files[0];
-    const totalBytes = files.reduce((acc, f) => acc + f.size, 0);
+    const hasFolderStructure = files.some((f: any) => f.webkitRelativePath && f.webkitRelativePath.includes('/'));
+    let fileToStream: File;
+    let isFolder = false;
+
+    if (hasFolderStructure) {
+      isFolder = true;
+      const folderName = (files[0] as any).webkitRelativePath.split('/')[0] || 'Beam_Folder';
+      
+      const zip = new JSZip();
+      for (const f of files) {
+        const relPath = (f as any).webkitRelativePath || f.name;
+        zip.file(relPath, f);
+      }
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      fileToStream = new File([zipBlob], `${folderName}.zip`, { type: 'application/zip' });
+    } else if (files.length > 1) {
+      isFolder = true;
+      const folderName = `Beam_Bundle_${Date.now().toString().slice(-4)}`;
+      const zip = new JSZip();
+      for (const f of files) {
+        zip.file(f.name, f);
+      }
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      fileToStream = new File([zipBlob], `${folderName}.zip`, { type: 'application/zip' });
+    } else {
+      fileToStream = files[0];
+    }
+
+    const totalBytes = fileToStream.size;
 
     const session: TransferSession = {
       id: `transfer-${Date.now()}`,
       targetDevice: target,
       direction: 'outgoing',
-      files: files.map((f, i) => ({
-        id: `f-${Date.now()}-${i}`,
-        name: f.name,
-        path: f.name,
-        size: f.size,
-        type: f.type || 'application/octet-stream',
-        progress: 10,
-        status: 'transferring',
-        blake3Hash: 'Staging...',
-        verifiedIdentical: false,
-      })),
+      files: [
+        {
+          id: `f-${Date.now()}`,
+          name: fileToStream.name,
+          path: fileToStream.name,
+          size: fileToStream.size,
+          type: isFolder ? 'application/zip' : (fileToStream.type || 'application/octet-stream'),
+          progress: 10,
+          status: 'transferring',
+          blake3Hash: 'Staging folder archive...',
+          verifiedIdentical: false,
+        }
+      ],
       totalBytes,
       transferredBytes: 0,
       overallPercent: 10,
@@ -154,12 +231,12 @@ export const App: React.FC = () => {
     };
     setActiveSession(session);
 
-    // Stage the file on the local daemon so connected mobile device can download
+    // Stage the file or folder archive on the local daemon so connected mobile device can download
     try {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', 'http://127.0.0.1:53317/api/beam/stage-file', true);
-      xhr.setRequestHeader('X-File-Name', encodeURIComponent(firstFile.name));
-      xhr.setRequestHeader('X-File-Size', firstFile.size.toString());
+      xhr.setRequestHeader('X-File-Name', encodeURIComponent(fileToStream.name));
+      xhr.setRequestHeader('X-File-Size', fileToStream.size.toString());
 
       xhr.upload.onprogress = (evt) => {
         if (evt.lengthComputable) {
@@ -198,8 +275,8 @@ export const App: React.FC = () => {
           // Add to local history list
           const newHistoryItem: HistoryEntry = {
             id: Date.now().toString(),
-            fileName: firstFile.name,
-            fileSize: firstFile.size,
+            fileName: fileToStream.name,
+            fileSize: fileToStream.size,
             deviceName: target.name,
             deviceType: target.type,
             direction: 'outgoing',
@@ -221,7 +298,7 @@ export const App: React.FC = () => {
         setActiveSession(null);
       };
 
-      xhr.send(firstFile);
+      xhr.send(fileToStream);
     } catch (err: any) {
       console.error('File stage failed:', err);
       alert('Error staging file: ' + (err?.message || err));
@@ -247,35 +324,18 @@ export const App: React.FC = () => {
       .finally(() => setIsScanning(false));
   };
 
-  const handleDownloadRemoteFile = (remoteFile: RemoteFileEntry) => {
-    const session: TransferSession = {
-      id: `download-${Date.now()}`,
-      targetDevice: selectedDevice!,
-      direction: 'incoming',
-      files: [
-        {
-          id: `file-${Date.now()}`,
-          name: remoteFile.name,
-          path: remoteFile.path,
-          size: remoteFile.size,
-          type: remoteFile.mimeType,
-          progress: 100,
-          status: 'completed',
-          blake3Hash: 'b3_verified_identical',
-          verifiedIdentical: true,
-        },
-      ],
-      totalBytes: remoteFile.size,
-      transferredBytes: remoteFile.size,
-      overallPercent: 100,
-      currentSpeedMbps: 820,
-      speedHistory: [680, 820],
-      etaSeconds: 0,
-      status: 'completed',
-      startTime: Date.now(),
-    };
-    setActiveSession(session);
-    setIsExplorerOpen(false);
+  const handleDownloadRemoteFile = async (remoteFile: RemoteFileEntry) => {
+    try {
+      await fetch('http://127.0.0.1:53317/api/beam/request-phone-download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filePath: remoteFile.path, fileName: remoteFile.name }),
+      });
+      alert(`Download request sent to phone for "${remoteFile.name}".\n\nYour phone will beam it directly to your PC Downloads/Beam folder!`);
+      setIsExplorerOpen(false);
+    } catch (e) {
+      console.error('Download request error:', e);
+    }
   };
 
   const formatBytes = (bytes: number) => {

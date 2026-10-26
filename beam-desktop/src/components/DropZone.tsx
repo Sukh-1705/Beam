@@ -29,10 +29,58 @@ export const DropZone: React.FC<DropZoneProps> = ({
     setIsDragOver(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const traverseEntry = async (entry: any, currentPath = ''): Promise<File[]> => {
+    const collected: File[] = [];
+    if (entry.isFile) {
+      await new Promise<void>((resolve) => {
+        entry.file((file: File) => {
+          const relPath = currentPath ? `${currentPath}/${file.name}` : file.name;
+          Object.defineProperty(file, 'webkitRelativePath', {
+            value: relPath,
+            writable: true,
+            configurable: true,
+          });
+          collected.push(file);
+          resolve();
+        });
+      });
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      const entries: any[] = await new Promise((resolve) => {
+        reader.readEntries((ents: any[]) => resolve(ents || []));
+      });
+      const newPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+      for (const child of entries) {
+        const subFiles = await traverseEntry(child, newPath);
+        collected.push(...subFiles);
+      }
+    }
+    return collected;
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
+
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      const allFiles: File[] = [];
+      for (let i = 0; i < e.dataTransfer.items.length; i++) {
+        const item = e.dataTransfer.items[i];
+        const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+        if (entry) {
+          const files = await traverseEntry(entry);
+          allFiles.push(...files);
+        } else {
+          const f = item.getAsFile();
+          if (f) allFiles.push(f);
+        }
+      }
+      if (allFiles.length > 0) {
+        onFilesSelected(allFiles);
+        return;
+      }
+    }
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const filesArray = Array.from(e.dataTransfer.files);
