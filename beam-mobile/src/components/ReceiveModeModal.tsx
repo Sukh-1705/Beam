@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Radio, ArrowDownLeft, ShieldCheck, Wifi } from 'lucide-react';
+import { X, ArrowDownLeft, ShieldCheck, Wifi, Folder } from 'lucide-react';
 
 interface ReceiveModeModalProps {
   isOpen: boolean;
@@ -15,56 +15,52 @@ export const ReceiveModeModal: React.FC<ReceiveModeModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/85 backdrop-blur-lg animate-in fade-in duration-200">
-      <div className="glass-panel w-full max-w-sm rounded-[32px] p-6 border border-white/10 shadow-2xl relative text-center flex flex-col items-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
+      <div className="surface-card w-full max-w-sm rounded-2xl p-6 border border-white/10 shadow-2xl relative text-center flex flex-col items-center">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-white bg-white/5 transition-colors"
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
 
-        {/* Animated Radar Ripple Circles */}
-        <div className="relative my-8 w-44 h-44 flex items-center justify-center">
-          <div className="absolute inset-0 rounded-full border border-emerald-500/20 animate-ping duration-1000" />
-          <div className="absolute inset-4 rounded-full border border-teal-500/30 animate-pulse" />
-          <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-2xl shadow-emerald-500/50">
-            <ArrowDownLeft className="w-10 h-10 stroke-[2.5]" />
-          </div>
+        {/* Clean Icon */}
+        <div className="my-6 w-14 h-14 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center text-white shadow-sm">
+          <ArrowDownLeft className="w-6 h-6 stroke-[2]" />
         </div>
 
-        <h3 className="text-xl font-extrabold text-white tracking-tight mb-1">
-          Ready to Receive
+        <h3 className="text-base font-semibold text-white tracking-tight mb-1">
+          Receive Mode Active
         </h3>
-        <p className="text-xs text-emerald-300 font-semibold mb-4">
-          Visible to PC & nearby Beam devices
+        <p className="text-xs text-zinc-400 mb-5">
+          Ready to receive files from paired desktop or phone
         </p>
 
-        <div className="w-full space-y-2.5 mb-6 text-left">
-          <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-between">
-            <span className="text-xs text-slate-400">Device Name</span>
-            <span className="text-xs font-bold text-white">{deviceName}</span>
+        <div className="w-full space-y-2 mb-6 text-left">
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between text-xs">
+            <span className="text-zinc-400">Device Identity</span>
+            <span className="font-medium text-white">{deviceName}</span>
           </div>
 
-          <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-between">
-            <span className="text-xs text-slate-400">Auto-Accept</span>
-            <div className="flex items-center space-x-1 text-xs text-emerald-400 font-semibold">
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between text-xs">
+            <span className="text-zinc-400">Save Destination</span>
+            <span className="font-mono text-zinc-200">Downloads/Beam</span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between text-xs">
+            <span className="text-zinc-400">Security</span>
+            <div className="flex items-center space-x-1 text-emerald-400 font-mono text-[11px]">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Trusted Devices</span>
+              <span>Lossless SHA-256</span>
             </div>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-between">
-            <span className="text-xs text-slate-400">Connection</span>
-            <span className="text-xs font-mono text-purple-300">Wi-Fi 6 · Port 53318</span>
           </div>
         </div>
 
         <button
           onClick={onClose}
-          className="w-full py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs transition-colors"
+          className="w-full btn-secondary py-2.5 rounded-xl text-xs"
         >
-          Hide to Background Service
+          Keep Listening in Background
         </button>
       </div>
     </div>

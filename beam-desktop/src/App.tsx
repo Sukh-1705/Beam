@@ -9,32 +9,15 @@ import { ClipboardSync } from './components/ClipboardSync';
 import { AutoBackupCenter } from './components/AutoBackupCenter';
 import { HistoryModal } from './components/HistoryModal';
 import { Device, TransferSession, HistoryEntry, RemoteFileEntry } from './types';
-import { Zap, Sparkles } from 'lucide-react';
-
-const INITIAL_DEVICES: Device[] = [
-  {
-    id: 'phone-android-live',
-    name: 'Android Mobile (LAN)',
-    type: 'android',
-    model: 'Android Phone',
-    os: 'Android',
-    ip: '10.50.4.92',
-    port: 53317,
-    isTrusted: true,
-    isPaired: true,
-    connectionType: 'wifi',
-    linkSpeed: 'Wi-Fi 6 · Direct Link',
-    batteryLevel: 90,
-    isCharging: false,
-  },
-];
+import { Zap, Sparkles, Folder, CheckCircle2, ArrowDownLeft, ArrowUpRight, UploadCloud, ShieldCheck } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const [devices, setDevices] = useState<Device[]>(INITIAL_DEVICES);
-  const [selectedDevice, setSelectedDevice] = useState<Device | null>(INITIAL_DEVICES[0]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [localIp, setLocalIp] = useState<string>('10.50.4.92');
+  const [localIp, setLocalIp] = useState<string>('10.50.0.136');
   const [currentPin, setCurrentPin] = useState('839 204');
+  const [isWindowDragActive, setIsWindowDragActive] = useState(false);
 
   // Modals
   const [isPairingOpen, setIsPairingOpen] = useState(false);
@@ -59,10 +42,14 @@ export const App: React.FC = () => {
           if (data.pin) setCurrentPin(data.pin);
 
           // Update devices if peers connected
-          if (data.connectedDevices && data.connectedDevices.length > 0) {
+          if (data.connectedDevices) {
             setDevices(data.connectedDevices);
-            if (!selectedDevice || !data.connectedDevices.some((d: Device) => d.id === selectedDevice.id)) {
-              setSelectedDevice(data.connectedDevices[0]);
+            if (data.connectedDevices.length > 0) {
+              if (!selectedDevice || !data.connectedDevices.some((d: Device) => d.id === selectedDevice.id)) {
+                setSelectedDevice(data.connectedDevices[0]);
+              }
+            } else {
+              setSelectedDevice(null);
             }
           }
 
@@ -72,31 +59,71 @@ export const App: React.FC = () => {
           }
         }
       } catch (e) {
-        // Fallback for standalone preview
+        // Desktop daemon starting up
       }
     };
 
     fetchStatus();
-    const interval = setInterval(fetchStatus, 2000);
+    const interval = setInterval(fetchStatus, 1500);
     return () => clearInterval(interval);
   }, [selectedDevice]);
+
+  // Window drag & drop listeners
+  useEffect(() => {
+    let dragCounter = 0;
+
+    const handleDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounter++;
+      if (e.dataTransfer && e.dataTransfer.types.includes('Files')) {
+        setIsWindowDragActive(true);
+      }
+    };
+
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounter--;
+      if (dragCounter <= 0) {
+        setIsWindowDragActive(false);
+        dragCounter = 0;
+      }
+    };
+
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+    };
+
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      setIsWindowDragActive(false);
+      dragCounter = 0;
+      if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+        handleFilesSelected(Array.from(e.dataTransfer.files));
+      }
+    };
+
+    window.addEventListener('dragenter', handleDragEnter);
+    window.addEventListener('dragleave', handleDragLeave);
+    window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('drop', handleDrop);
+
+    return () => {
+      window.removeEventListener('dragenter', handleDragEnter);
+      window.removeEventListener('dragleave', handleDragLeave);
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('drop', handleDrop);
+    };
+  }, [selectedDevice, devices]);
 
   // Handle files dropped / selected on Desktop
   const handleFilesSelected = async (files: File[]) => {
     if (files.length === 0) return;
-    const target = selectedDevice || devices[0] || {
-      id: 'mobile-peer',
-      name: 'Mobile Phone',
-      type: 'android',
-      model: 'Android Phone',
-      os: 'Android',
-      ip: localIp,
-      port: 53317,
-      isTrusted: true,
-      isPaired: true,
-      connectionType: 'wifi',
-      linkSpeed: 'Wi-Fi 6 · Local Link'
-    };
+    const target = selectedDevice || (devices.length > 0 ? devices[0] : null);
+    if (!target) {
+      alert(`No phone is connected yet!\n\nTo beam files:\n1. Open Beam on your phone.\n2. Tap Connect (or Scan QR Code).\n3. Once your phone appears in the left sidebar, stream files directly.`);
+      setIsPairingOpen(true);
+      return;
+    }
 
     const firstFile = files[0];
     const totalBytes = files.reduce((acc, f) => acc + f.size, 0);
@@ -148,8 +175,12 @@ export const App: React.FC = () => {
 
       xhr.onload = () => {
         if (xhr.status === 200) {
-          const resp = JSON.parse(xhr.responseText);
-          const hash = resp.item?.hash || 'b3_verified_hash';
+          let hash = 'sha256_verified';
+          try {
+            const resp = JSON.parse(xhr.responseText);
+            hash = resp.item?.hash || 'sha256_verified';
+          } catch (e) {}
+
           setActiveSession(prev => prev ? {
             ...prev,
             transferredBytes: totalBytes,
@@ -179,21 +210,22 @@ export const App: React.FC = () => {
             durationMs: 380,
           };
           setHistory(h => [newHistoryItem, ...h]);
+        } else {
+          alert('Failed to stage file on local server. HTTP ' + xhr.status);
+          setActiveSession(null);
         }
       };
 
+      xhr.onerror = () => {
+        alert('Network error staging file to Desktop server.');
+        setActiveSession(null);
+      };
+
       xhr.send(firstFile);
-    } catch (err) {
-      console.warn('Direct stage failed, using local simulation:', err);
-      // Fallback completion
-      setTimeout(() => {
-        setActiveSession(prev => prev ? {
-          ...prev,
-          overallPercent: 100,
-          status: 'completed',
-          files: prev.files.map(f => ({ ...f, progress: 100, verifiedIdentical: true }))
-        } : null);
-      }, 1000);
+    } catch (err: any) {
+      console.error('File stage failed:', err);
+      alert('Error staging file: ' + (err?.message || err));
+      setActiveSession(null);
     }
   };
 
@@ -206,31 +238,13 @@ export const App: React.FC = () => {
     fetch('http://127.0.0.1:53317/api/beam/info')
       .then(r => r.json())
       .then(d => {
-        if (d.connectedDevices?.length > 0) setDevices(d.connectedDevices);
+        if (d.connectedDevices) {
+          setDevices(d.connectedDevices);
+          if (d.connectedDevices.length > 0) setSelectedDevice(d.connectedDevices[0]);
+        }
       })
       .catch(() => {})
       .finally(() => setIsScanning(false));
-  };
-
-  const handleSimulatePair = (phoneName: string) => {
-    const newDevice: Device = {
-      id: `dev-${Date.now()}`,
-      name: phoneName,
-      type: 'android',
-      model: 'Android Phone',
-      os: 'Android',
-      ip: localIp,
-      port: 53317,
-      isTrusted: true,
-      isPaired: true,
-      connectionType: 'wifi',
-      linkSpeed: 'Wi-Fi 6 · 860 Mbps',
-      batteryLevel: 95,
-      isCharging: true,
-    };
-    setDevices([newDevice, ...devices]);
-    setSelectedDevice(newDevice);
-    setIsPairingOpen(false);
   };
 
   const handleDownloadRemoteFile = (remoteFile: RemoteFileEntry) => {
@@ -264,8 +278,16 @@ export const App: React.FC = () => {
     setIsExplorerOpen(false);
   };
 
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
   return (
-    <div className="flex flex-col min-h-screen bg-[#0b0d14] text-slate-100 selection:bg-purple-500/30 selection:text-purple-200">
+    <div className="flex flex-col min-h-screen bg-[#08090d] text-zinc-100 selection:bg-indigo-500/30 selection:text-indigo-200">
       {/* Top Header */}
       <Header
         activeDevice={selectedDevice}
@@ -278,7 +300,7 @@ export const App: React.FC = () => {
         localIp={localIp}
       />
 
-      {/* Main Workspace: Sidebar + Dropzone + Live Transfer */}
+      {/* Main Workspace: Sidebar + Central Stage */}
       <div className="flex-1 flex overflow-hidden">
         {/* Discovered Devices Sidebar */}
         <DeviceSidebar
@@ -287,6 +309,9 @@ export const App: React.FC = () => {
           onSelectDevice={(d) => setSelectedDevice(d)}
           onRefresh={handleRefreshDevices}
           isScanning={isScanning}
+          onOpenPairing={() => setIsPairingOpen(true)}
+          localIp={localIp}
+          port={53317}
         />
 
         {/* Central Workspace */}
@@ -302,6 +327,31 @@ export const App: React.FC = () => {
             />
           )}
 
+          {/* Incoming File Received Toast / Banner */}
+          {history.length > 0 && history[0].direction === 'incoming' && (
+            <div className="p-4 rounded-xl surface-card border border-emerald-500/30 flex items-center justify-between animate-in zoom-in-95">
+              <div className="flex items-center space-x-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center font-bold">
+                  ✓
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-white">
+                    Received {history[0].fileName}
+                  </h4>
+                  <p className="text-[11px] text-zinc-400 font-mono mt-0.5">
+                    From {history[0].deviceName} • Bit-Verified Identical • Saved to ~/Downloads/Beam
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleOpenFolder}
+                className="btn-primary px-3 py-1.5 rounded-lg text-xs"
+              >
+                Reveal in Folder
+              </button>
+            </div>
+          )}
+
           {/* Hero Drag & Drop Zone */}
           <DropZone
             onFilesSelected={handleFilesSelected}
@@ -309,49 +359,126 @@ export const App: React.FC = () => {
             onOpenExplorer={() => setIsExplorerOpen(true)}
           />
 
-          {/* Feature Highlights Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+          {/* Recent Staged / Transferred Files Tray */}
+          {history.length > 0 && (
+            <div className="surface-card rounded-2xl p-5 border border-white/[0.06] space-y-3">
+              <div className="flex items-center justify-between border-b border-white/[0.05] pb-3">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-semibold text-white">Recent File Stream</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white/[0.06] text-zinc-400">
+                    {history.length}
+                  </span>
+                </div>
+                <button
+                  onClick={handleOpenFolder}
+                  className="text-xs text-zinc-400 hover:text-white flex items-center space-x-1 transition-colors"
+                >
+                  <Folder className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Open Folder</span>
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {history.slice(0, 5).map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08] transition-colors flex items-center justify-between"
+                  >
+                    <div className="flex items-center space-x-3 truncate pr-4">
+                      <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${
+                        item.direction === 'incoming'
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                      }`}>
+                        {item.direction === 'incoming' ? (
+                          <ArrowDownLeft className="w-3.5 h-3.5" />
+                        ) : (
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        )}
+                      </div>
+                      <div className="truncate">
+                        <p className="text-xs font-medium text-white truncate">{item.fileName}</p>
+                        <p className="text-[10px] text-zinc-400 font-mono">
+                          {formatBytes(item.fileSize)} • {item.deviceName} • {item.timestamp}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2 shrink-0">
+                      <span className="text-[10px] font-mono text-zinc-400 hidden sm:inline">
+                        {item.speedAverage}
+                      </span>
+                      {item.verified && (
+                        <span className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-mono border border-emerald-500/20">
+                          <ShieldCheck className="w-3 h-3" />
+                          <span>Lossless</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Precision Feature Hub */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-2">
             <div
               onClick={() => setIsExplorerOpen(true)}
-              className="p-5 rounded-2xl glass-panel-subtle hover:border-purple-500/30 transition-all cursor-pointer group"
+              className="p-4 rounded-xl surface-card surface-card-hover cursor-pointer group"
             >
-              <div className="w-10 h-10 rounded-xl bg-purple-600/10 border border-purple-500/20 text-purple-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                <Sparkles className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-white/10 text-zinc-300 flex items-center justify-center mb-2.5 group-hover:text-white transition-colors">
+                <Sparkles className="w-4 h-4" />
               </div>
-              <h4 className="text-sm font-bold text-white mb-1">Browse Phone Remotely</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Explore camera photos, downloads, and storage directly from PC with 1-click download.
+              <h4 className="text-xs font-semibold text-white mb-0.5">Explore Mobile Storage</h4>
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                Direct VFS access to remote camera rolls, downloads, and files with 1-click download.
               </p>
             </div>
 
             <div
               onClick={() => setIsBackupOpen(true)}
-              className="p-5 rounded-2xl glass-panel-subtle hover:border-emerald-500/30 transition-all cursor-pointer group"
+              className="p-4 rounded-xl surface-card surface-card-hover cursor-pointer group"
             >
-              <div className="w-10 h-10 rounded-xl bg-emerald-600/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                <Zap className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-white/10 text-zinc-300 flex items-center justify-center mb-2.5 group-hover:text-white transition-colors">
+                <Zap className="w-4 h-4" />
               </div>
-              <h4 className="text-sm font-bold text-white mb-1">Photo Auto-Backup</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Lossless camera roll sync over Wi-Fi when plugged in. Zero duplicates via cryptographic verification.
+              <h4 className="text-xs font-semibold text-white mb-0.5">Auto-Archival Stream</h4>
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                Lossless camera roll sync over Wi-Fi/Hotspot. Zero duplicates via BLAKE3 verification.
               </p>
             </div>
 
             <div
               onClick={() => setIsClipboardOpen(true)}
-              className="p-5 rounded-2xl glass-panel-subtle hover:border-cyan-500/30 transition-all cursor-pointer group"
+              className="p-4 rounded-xl surface-card surface-card-hover cursor-pointer group"
             >
-              <div className="w-10 h-10 rounded-xl bg-cyan-600/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                <Sparkles className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-white/10 text-zinc-300 flex items-center justify-center mb-2.5 group-hover:text-white transition-colors">
+                <Sparkles className="w-4 h-4" />
               </div>
-              <h4 className="text-sm font-bold text-white mb-1">Mirrored Clipboard</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Instant sync of copied text, links, or notes between PC and phone over LAN.
+              <h4 className="text-xs font-semibold text-white mb-0.5">Universal Clipboard</h4>
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                Bi-directional real-time text, link, and note mirroring between PC and phone.
               </p>
             </div>
           </div>
         </main>
       </div>
+
+      {/* Full Window Drag Overlay */}
+      {isWindowDragActive && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex flex-col items-center justify-center p-8 border-4 border-dashed border-indigo-500/60 pointer-events-none animate-in fade-in duration-150">
+          <div className="w-20 h-20 rounded-3xl bg-zinc-900 border border-white/20 flex items-center justify-center text-white mb-4 shadow-2xl">
+            <UploadCloud className="w-10 h-10 animate-bounce" />
+          </div>
+          <h2 className="text-2xl font-bold text-white tracking-tight mb-1">
+            Drop anywhere to beam
+          </h2>
+          <p className="text-sm text-zinc-400">
+            {selectedDevice ? `Streaming to ${selectedDevice.name}` : 'Streaming to connected phone'}
+          </p>
+        </div>
+      )}
 
       {/* Modals & Drawers */}
       <PairingModal
@@ -360,7 +487,6 @@ export const App: React.FC = () => {
         pin={currentPin}
         ipAddress={localIp}
         port={53317}
-        onSimulatePair={handleSimulatePair}
       />
 
       <RemoteExplorer

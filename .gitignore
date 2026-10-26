@@ -17,10 +17,11 @@ yarn-error.log*
 *.db
 *.db-journal
 
-# OS files
+# OS & Log files
 .DS_Store
 Thumbs.db
+*.log
+*.idsig
 
 # Dist binaries
 dist-bin/
-

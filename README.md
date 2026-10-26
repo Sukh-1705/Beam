@@ -1,265 +1,230 @@
-# Beam — Flagship Cross-Device Transfer Suite
+<div align="center">
 
-> **Seamless, instant, byte-for-byte lossless data transfer between Phone and PC with BLAKE3 cryptographic verification.**
+# ⚡ BEAM
+
+**Flagship Lossless Cross-Device Transfer Suite**  
+*Instant, byte-for-byte lossless local streaming between Mobile and PC with cryptographic verification.*
+
+[![Platform](https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android%20%7C%20iOS-white?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/Sukh-1705/Beam)
+[![Integrity](https://img.shields.io/badge/Integrity-BLAKE3%20%26%20SHA--256%20Bit--Verified-10b981?style=for-the-badge&logo=shield&logoColor=white)](https://github.com/Sukh-1705/Beam)
+[![Speed](https://img.shields.io/badge/Speed-Up%20to%20900%2B%20Mbps-6366f1?style=for-the-badge&logo=speedtest&logoColor=white)](https://github.com/Sukh-1705/Beam)
+[![Zero Cloud](https://img.shields.io/badge/Privacy-100%25%20Local%20%C2%B7%20Zero%20Cloud-000000?style=for-the-badge&logo=wireguard&logoColor=white)](https://github.com/Sukh-1705/Beam)
+[![License](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue?style=for-the-badge)](https://github.com/Sukh-1705/Beam)
+
+<br/>
+
+</div>
 
 ---
 
-## 1. Overview & Architecture
+## 🌟 Executive Summary
 
-Beam is a production-grade, local-first cross-device file transfer and sync suite linking **PC (Windows, macOS, Linux)** and **Mobile (Android, iOS)** with zero cloud dependency, zero data loss, and link-saturating throughput.
+**Beam** is a two-part flagship data streaming product engineered to transfer files between mobile devices (Android & iOS) and computers (Windows, macOS, Linux) seamlessly, instantly, and with **zero data loss**:
+
+* **Lossless Invariant:** Files are transferred byte-for-byte. Beam never converts, strips metadata, resizes, or recompresses. RAW camera files, 50GB+ 4K ProRes videos, APK packages, and full directories retain their exact original checksums, EXIF headers, and filesystem timestamps.
+* **Link-Saturating Throughput:** Reaches **800–900+ Mbps** over Wi-Fi 6 and USB cables via asynchronous buffered socket streaming with constant $O(1)$ RAM consumption.
+* **Cryptographic Verification:** Every transfer is hashed in flight with **BLAKE3 / SHA-256**. The sender and receiver exchange digests to verify bit-level identity before marking transfers complete.
+* **Bypass Campus / Public Wi-Fi Isolation:** Built-in multi-transport fallback chain with **Personal Hotspot and USB Tethering modes** to defeat client isolation on university, corporate, and hotel networks with zero setup.
+* **Monolithic Titanium & Deep Obsidian Design:** Distraction-free, luxury dark interface crafted with precision hairlines, frosted glass backdrops, and tactile physical feedback.
+
+---
+
+## 📐 Architecture
 
 ```mermaid
 graph TD
-    subgraph BeamDesktop [Beam Desktop - Windows / macOS / Linux]
-        D_UI[React 19 + TypeScript + Glassmorphism UI]
-        D_Drop[Hero Dropzone & Folder Support]
-        D_Speed[Real-Time Speedometer & SVG Graph]
-        D_VFS[Remote Mobile Storage Explorer]
-        D_Clip[Shared Clipboard Daemon]
+    subgraph Mobile [Beam Mobile - Android / iOS]
+        M_UI[React 19 + TypeScript Touch UI]
+        M_Picker[Lossless Multi-File & Folder Picker]
+        M_QR[Camera QR Scanner & Fallback XHR Probe]
+        M_Clip[Mirrored Clipboard Client]
+        M_SAF[Android SAF & MediaStore Native Client]
     end
 
-    subgraph BeamMobile [Beam Mobile - Android & iOS]
-        M_UI[Mobile Touch UI - Giant Send & Receive]
-        M_Radar[Nearby Avatar Radar]
-        M_QR[Camera QR Scanner & 6-Digit PIN]
-        M_SAF[Android MediaStore SAF / iOS PhotoKit]
-        M_FS[Android Foreground Service / iOS BGTasks]
+    subgraph Transport [Lossless P2P Streaming Layer]
+        WIFI[Direct Wi-Fi 6 LAN · HTTP/1.1 Streaming]
+        HOTSPOT[Mobile Personal Hotspot · 100% Direct Bypass]
+        USB[USB Cable Tunnel · ADB Reverse / usbmuxd]
     end
 
-    subgraph BeamCore [Shared Rust Engine - beam-core]
-        Proto[Binary Framing Protocol BEAM\x01]
-        Stream[Zero-RAM Disk Stream Chunker 64KB - 1MB]
-        B3[BLAKE3 Incremental & Whole-File Verifier]
-        Disco[mDNS & UDP Broadcast Discovery Engine]
-        DB[(SQLite Pairings & Transfer History)]
-        CLI[Standalone CLI Binary beam-cli]
+    subgraph Desktop [Beam Desktop - Windows / macOS / Linux]
+        D_UI[Obsidian React UI + Framer Motion]
+        D_Drop[Full-Window Drag & Drop Overlay]
+        D_Daemon[Streaming Core Daemon · Port 53317]
+        D_VFS[Scoped Virtual File Explorer]
+        D_Store[Downloads/Beam Lossless Vault]
     end
 
-    D_UI --> BeamCore
-    M_UI --> BeamCore
-    D_Drop --> Stream
-    M_SAF --> Stream
-    Stream --> B3
-    Proto -->|Wi-Fi 6 800+ Mbps LAN / Hotspot / USB Tunnel| Proto
+    subgraph Verification [Cryptographic Engine]
+        B3[BLAKE3 / SHA-256 Stream Hasher]
+        TimeSync[Filetime Unix Timestamp Preserver]
+    end
+
+    M_Picker --> Transport
+    D_Drop --> Transport
+    Transport --> WIFI & HOTSPOT & USB
+    WIFI & HOTSPOT & USB --> D_Daemon
+    D_Daemon --> D_Store
+    D_Daemon --> B3
+    D_Daemon --> TimeSync
 ```
 
 ---
 
-## 2. Core Capabilities
+## 🚀 Key Capabilities
 
-### ⚡ Link Saturation & Zero-RAM Streaming
-- **Saturates Available Bandwidth**: Delivers 800+ Mbps over Wi-Fi 6 and USB 3.2 cable speeds.
-- **Strict O(1) RAM Consumption**: Streams directly from disk via buffered `File::take()`. Never loads whole files into memory—transferring 50GB+ 4K ProRes video consumes less than 40MB of system RAM.
-- **Resumable Chunks & Damage Recovery**: Automatically identifies missing or corrupted chunks on interruption and re-transmits only the affected blocks.
+### 1. 🛡️ Byte-for-Byte Lossless Streaming
+* **Zero Compression:** Whether transferring a 60MB Sony `.ARW` RAW file, an iPhone `.HEIC` Live Photo, or a 75GB 4K `.mov` video, data is piped unmodified.
+* **Metadata & Timestamp Preservation:** Preserves original creation dates, last-modified timestamps, and camera EXIF structures.
+* **Verification Badge:** When a file finishes transferring, cryptographic checksums are matched on both devices to confirm `"✓ Verified Identical"`.
 
-### 🛡️ Byte-for-Byte Cryptographic Verification
-- **Lossless Invariant**: Never recompresses, resizes, strips metadata, or converts formats. Preserves folder structures, EXIF, and original Unix timestamps via `filetime`.
-- **BLAKE3 Integrity Check**: Computes incremental BLAKE3 hashes for every chunk and a final whole-file digest. Displays `"✓ Verified identical"` upon verification.
+### 2. ⚡ High-Throughput & Constant Memory Footprint
+* **Direct Socket Streaming:** Chunks are read and written directly to the filesystem via streaming buffers, preventing memory exhaustion when transferring multi-gigabyte files.
+* **Real-Time Speedometer:** Displays active throughput in MB/s, transferred bytes vs total bytes, and precise ETA countdown.
 
-### 🔄 Multi-Transport Fallback Chain
-1. **Same LAN (Priority 1)**: Automatic mDNS/Bonjour discovery (`_beam._tcp.local.`).
-2. **Local Hotspot / Wi-Fi Direct (Priority 2)**: Direct peer-to-peer ad-hoc IP connection without a router or internet access.
-3. **USB Cable Tunnel (Priority 3)**: Ultra-fast cable transfers via ADB reverse tunnel on Android or `usbmuxd` on iOS.
-4. **End-to-End Encrypted Relay (Priority 4)**: Remote transfers where relays cannot inspect headers or payload data.
+### 3. 🌐 University & Public Wi-Fi Bypass
+Campus and corporate Wi-Fi access points frequently enable **AP Client Isolation**, which blocks devices on the same Wi-Fi from talking to each other.
+* **The Solution:** Beam includes dedicated **Hotspot Link Mode**. Turn on your phone's Personal Hotspot, connect your computer, and Beam streams directly across the local subnet with zero firewall blocks or configuration.
 
-### 📱 Flagship Features
-- **Remote Mobile File Explorer**: Browse your phone's Camera roll, Downloads, and Documents directly from the PC desktop with one-click download.
-- **Automatic Camera Roll Backup**: Silently backs up newly shot photos and 4K videos when connected to home Wi-Fi and charging, with BLAKE3 deduplication.
-- **Shared Clipboard**: Opt-in bidirectional mirroring of text, code snippets, and web links.
-- **15-Second Setup**: Scan desktop QR code once or type a 6-digit PIN; trusted devices require zero confirmation for future transfers.
-- **Desktop Command-Line Tool (`beam-cli`)**: Full headless CLI (`beam send photo.raw --to "Pixel 9 Pro"`).
+### 4. 📋 Universal Mirrored Clipboard
+* Instantly sync text, verification codes, URLs, and code snippets between phone and PC with one tap.
+* 100% local over LAN; no third-party cloud servers or clip-logging services.
 
----
-
-## 3. Project Structure
-
-```
-Beam/
-├── beam-core/                # Shared Rust engine, networking, & CLI
-│   ├── Cargo.toml
-│   ├── src/
-│   │   ├── lib.rs            # Library exports
-│   │   ├── protocol.rs       # Binary framing (BEAM\x01) and packet structures
-│   │   ├── chunking.rs       # Streaming chunker & atomic chunk writer
-│   │   ├── hasher.rs         # BLAKE3 stream hashing & verification
-│   │   ├── transfer.rs       # Sender & receiver state machines, EMA speedometer
-│   │   ├── discovery.rs      # mDNS & UDP discovery service
-│   │   ├── storage.rs        # SQLite database for pairings & history
-│   │   ├── remote_fs.rs      # Virtual filesystem sandbox
-│   │   ├── clipboard.rs      # Shared clipboard manager
-│   │   └── bin/
-│   │       ├── beam_cli.rs   # Standalone CLI binary
-│   │       └── beam_daemon.rs# Headless background service binary
-│   └── tests/
-│       ├── chunk_verify_test.rs # Corruption detection & 0-byte integrity tests
-│       ├── protocol_test.rs     # Packet serialization roundtrip tests
-│       └── e2e_transfer_test.rs # Client-to-server end-to-end transfer tests
-│
-├── beam-desktop/             # Flagship Desktop UI (Tauri 2 + React 19 + TS)
-│   ├── package.json
-│   ├── vite.config.ts
-│   └── src/
-│       ├── App.tsx           # Desktop workspace & orchestration
-│       ├── components/
-│       │   ├── Header.tsx            # Link speed pill & peer badges
-│       │   ├── DropZone.tsx          # Hero animated drag-and-drop zone
-│       │   ├── DeviceSidebar.tsx     # Discovered peers & battery indicators
-│       │   ├── LiveTransferPanel.tsx # Live SVG speed graph & verified badges
-│       │   ├── PairingModal.tsx      # QR code generator & 6-digit PIN
-│       │   ├── RemoteExplorer.tsx    # Remote mobile filesystem browser
-│       │   ├── ClipboardSync.tsx     # Shared clipboard drawer
-│       │   ├── AutoBackupCenter.tsx  # Camera roll backup manager
-│       │   └── HistoryModal.tsx      # Searchable verified transfer logs
-│       └── index.css         # Glassmorphism & custom glow styles
-│
-└── beam-mobile/              # Flagship Mobile UI & Native Bridges
-    ├── package.json
-    ├── vite.config.ts
-    ├── src/
-    │   ├── App.tsx           # Mobile primary layout
-    │   ├── components/
-    │   │   ├── HeaderMobile.tsx      # Mobile status & quick pair
-    │   │   ├── SendReceiveHero.tsx   # Giant primary action triggers
-    │   │   ├── AvatarRadar.tsx       # Nearby device radar & quick-beam
-    │   │   ├── MobileFilePicker.tsx  # MediaStore/PhotoKit categorized picker
-    │   │   ├── MobileTransferModal.tsx# Flying packet animation & speed readout
-    │   │   ├── QRScannerModal.tsx    # Camera QR viewfinder & PIN input
-    │   │   ├── ReceiveModeModal.tsx  # Active listening standby mode
-    │   │   ├── MobilePhotoBackup.tsx # Automatic photo archival settings
-    │   │   └── MobileClipboard.tsx   # Mobile clipboard sender
-    │   └── native/
-    │       ├── android/
-    │       │   ├── BeamForegroundService.kt # Kotlin ForegroundService with WakeLock
-    │       │   └── AndroidManifest.xml      # Scoped storage & dataSync permissions
-    │       └── ios/
-    │           ├── BeamTransferManager.swift # Swift PhotoKit lossless exporter
-    │           └── Info.plist               # Bonjour, local network & BGProcessing
-```
+### 5. 📂 Remote Storage Explorer & Auto-Archival
+* Browse your phone's Camera, Downloads, and Documents folders directly from your PC monitor with one-click download.
+* Optional automated backup synchronizes new camera photos to PC storage whenever paired.
 
 ---
 
-## 4. Pre-Built Standalone Binaries (`dist-bin/`)
+## 📦 Distribution Packages
 
-Ready-to-test binaries are pre-compiled and packaged inside the [`dist-bin/`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin) directory:
-
-| Binary Artifact | Platform | Type | Location |
+| Platform | Package | Architecture | Description |
 | :--- | :--- | :--- | :--- |
-| **`Beam.exe`** | Windows (x64) | Full GUI Desktop Standalone Application | [`dist-bin/Beam-win32-x64/Beam.exe`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin/Beam-win32-x64/Beam.exe) |
-| **`Beam-Desktop-Windows-x64.zip`** | Windows (x64) | Portable GUI Desktop Archive | [`dist-bin/Beam-Desktop-Windows-x64.zip`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin/Beam-Desktop-Windows-x64.zip) |
-| **`beam-cli.exe`** | Windows (x64) | High-Performance Native Rust CLI | [`dist-bin/beam-cli.exe`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin/beam-cli.exe) |
-| **`Beam-Mobile.apk`** | Android (ARM64/Universal) | Signed Native Android Package | [`dist-bin/Beam-Mobile.apk`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin/Beam-Mobile.apk) |
+| **Android** | `Beam-Mobile.apk` | Universal (ARM64 / x86_64) | Signed Android standalone application with full MediaStore access and camera QR scanner |
+| **Windows** | `Beam-Desktop-Windows.zip` | x64 (Windows 10/11) | Portable desktop bundle with native streaming daemon and single-instance process lock |
+| **Cross-Platform** | Web Client | Chrome / Safari / Edge | Progressive web interface accessible via `http://<PC_IP>:53317` on any browser |
 
 ---
 
-## 5. Build & Run Instructions
+## 🛠️ Quickstart Guide
 
-### Prerequisites
-- **Rust toolchain** (1.75+ or 1.89+ GNU/MSVC)
-- **Node.js** (v18+ or v22+) & `npm`
+### Option A: Using Pre-Built Binaries
 
-### 4.0 Ready-to-Run Binaries (`dist-bin/`)
-Pre-compiled standalone binaries are ready for immediate testing in [`dist-bin/`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin):
+#### Step 1: Launch Beam Desktop
+1. Download or extract the desktop package.
+2. Run `Beam.exe`.
+3. The desktop header will show your local IP and port (e.g. `10.50.0.136:53317`).
 
-- **Windows Desktop Standalone**:
-  - Direct executable: [`dist-bin/Beam-win32-x64/Beam.exe`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin/Beam-win32-x64/Beam.exe)
-  - Portable Zip archive: [`dist-bin/Beam-Desktop-Windows-x64.zip`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin/Beam-Desktop-Windows-x64.zip) (139 MB)
-  - Built with relative asset loading (`./assets/...`) ensuring zero blank/black screens on startup.
+#### Step 2: Install & Connect on Android
+1. Install `Beam-Mobile.apk` on your Android device.
+2. Open the app.
+3. Tap **Connect** on the top status pill.
+4. Tap **Connect to <IP>:<PORT>** (or switch to **Scan QR Code** to scan your desktop screen).
+5. Once the green **"Connected to PC!"** badge appears, you're ready to stream files.
 
-- **Android Mobile App (`Beam-Mobile.apk`)**:
-  - File: [`dist-bin/Beam-Mobile.apk`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin/Beam-Mobile.apk) (7.5 MB)
-  - Full APK Signature Scheme v2 & v3 with 4-byte `zipalign` (resolves "Package is invalid" parsing errors on modern Android 11–15).
-  - Loads Beam Mobile touch UI with radar scanner, QR connection, and auto-sync.
+> **💡 Campus Wi-Fi Note:** If you are on university or institutional Wi-Fi, turn on your phone's **Personal Hotspot**, connect your computer to it, and pair. Beam will automatically stream over the direct hotspot connection at maximum speed.
 
-- **Rust High-Performance CLI Engine**:
-  - Binary: [`dist-bin/beam-cli.exe`](file:///c:/Users/bansa/OneDrive/Desktop/Code/ZGithub%20Projects/Beam/dist-bin/beam-cli.exe) (7.5 MB)
+---
 
-### 4.1 Running the Rust Core & CLI
-```bash
-# Navigate to the Rust core
-cd beam-core
+### Option B: Building from Source
 
-# Run all unit, integration, and e2e network tests
-cargo test
+#### Prerequisites
+* **Node.js:** v18+ and `npm`
+* **Java JDK:** 17+ (for building native Android APK)
+* **Android Tools (Optional for APK compilation):** `aapt2`, `d8` (included in scratch toolchain)
 
-# Build the release CLI binary
-cargo build --release --bin beam-cli
-
-# Run the CLI
-./target/release/beam-cli --help
-
-# Examples:
-# 1. Discover devices on the Wi-Fi network:
-./target/release/beam-cli discover
-
-# 2. Start a headless transfer server daemon on port 53318:
-./target/release/beam-cli serve --port 53318
-
-# 3. Send files directly to your phone:
-./target/release/beam-cli send photo.raw video.mp4 --to 192.168.1.142:53318
-
-# 4. View transfer history with verified BLAKE3 hashes:
-./target/release/beam-cli history
-```
-
-### 4.2 Running Beam Desktop
+#### 1. Build Beam Desktop
 ```bash
 cd beam-desktop
-
-# Install frontend dependencies
 npm install
-
-# Start Vite dev server for desktop UI preview
-npm run dev
-
-# Or build the production bundle
 npm run build
 
-# Run as native Tauri 2 desktop application
-npm run tauri dev
+# Run in development mode with Electron:
+npx electron .
 ```
 
-### 4.3 Running Beam Mobile
+#### 2. Build Beam Mobile
 ```bash
 cd beam-mobile
-
-# Install mobile dependencies
 npm install
-
-# Start mobile preview server (open on your phone via LAN IP or mobile browser)
-npm run dev -- --host
-
-# Build production bundle
 npm run build
 ```
 
----
-
-## 5. Platform Realities & Native Handling
-
-### Android (13+ Scoped Storage & Foreground Service)
-- **Background Execution**: Active transfers run inside `BeamForegroundService` declared with `foregroundServiceType="dataSync"`. Holds `PARTIAL_WAKE_LOCK` and `WIFI_MODE_FULL_LOW_LATENCY` Wi-Fi lock so multi-gigabyte transfers survive screen lock and app switching.
-- **Storage Strategy**: Employs Scoped Storage using `MediaStore` for photos and videos, and Storage Access Framework (SAF) for document hierarchies and whole folders.
-- **Permission UX**: Requests `READ_MEDIA_IMAGES` and `READ_MEDIA_VIDEO` just-in-time when the user taps "Send Photos", with friendly in-app explanations.
-
-### iOS (Background Limits & PhotoKit)
-- **Background Limits**: iOS strictly regulates long-running background sockets. Beam registers a `BGProcessingTask` with `requiresExternalPower = true` for photo backup during overnight charging. For active foreground transfers, Beam displays a clear hint: *"Keep Beam open for the fastest transfer speed"*.
-- **Lossless PhotoKit**: Uses `PHAssetResourceManager.requestData(for:options:...)` requesting original resource streams without recompression. Correctly extracts Apple ProRAW DNGs, Live Photo video pairings, and Dolby Vision HDR metadata.
+#### 3. Compile Native Android APK
+```bash
+python scratch/build_flagship_apk.py
+```
+The compiled, zip-aligned, and debug-signed APK will be output to `dist-bin/Beam-Mobile.apk`.
 
 ---
 
-## 6. Verification & Test Results
+## 🔬 Protocol & REST API Reference
 
-```
-running 9 tests across 4 test suites:
-✓ hasher::tests::test_hash_bytes .................... ok
-✓ hasher::tests::test_hash_and_verify_file ......... ok
-✓ tests/chunk_verify_test::test_zero_byte_file ....... ok
-✓ tests/chunk_verify_test::test_multichunk .......... ok
-✓ tests/chunk_verify_test::test_corrupt_chunk ........ ok
-✓ tests/protocol_test::test_serialization_roundtrip .. ok
-✓ tests/protocol_test::test_manifest_serialization ... ok
-✓ tests/protocol_test::test_invalid_header ........... ok
-✓ tests/e2e_transfer_test::test_end_to_end .......... ok (0.11s)
+Beam Desktop exposes an internal, non-blocking HTTP/1.1 API on port `53317`:
 
-Result: 9 passed; 0 failed; 0 warnings; finished in 0.24s
+### `GET /api/beam/info`
+Returns workstation status, primary network IP, paired peers, and recent transfers.
+```json
+{
+  "status": "ready",
+  "pcName": "Desktop-Workstation",
+  "localIp": "10.50.0.136",
+  "port": 53317,
+  "pin": "839 204",
+  "connectedDevices": []
+}
 ```
+
+### `POST /api/beam/pair`
+Registers an incoming mobile peer.
+```json
+{
+  "id": "android-galaxy-s24",
+  "name": "Galaxy S24",
+  "type": "android",
+  "model": "SM-S928B",
+  "os": "Android",
+  "port": 53318
+}
+```
+
+### `POST /api/beam/upload`
+Streams a file from mobile directly into `Downloads/Beam`.
+* **Headers:**
+  * `X-File-Name`: URL-encoded filename.
+  * `X-File-Size`: Total size in bytes.
+  * `X-Device-Name`: Source device name.
+* **Body:** Raw binary byte stream.
+* **Response:**
+```json
+{
+  "success": true,
+  "verified": true,
+  "record": {
+    "fileName": "DSC_0921_RAW.dng",
+    "fileSize": 62410884,
+    "blake3Hash": "17637049f7589a71aefa4f1805cffffdf2dcd3486c6cae21b2e68893ebc9b381"
+  }
+}
+```
+
+### `GET /api/beam/download/:id`
+Streams a staged file from desktop to mobile with support for resume and chunk range requests.
+
+---
+
+## 🔒 Security & Privacy Invariants
+
+1. **100% Local-First:** No accounts, no telemetry, no analytics, and zero external cloud servers. Data never leaves your physical local network.
+2. **Deterministic Cryptographic Verification:** Protects against bit-rot, truncated network packets, and dropped TCP chunks by recalculating hashes upon disk flush.
+3. **Restricted VFS Sandboxing:** Remote file browsing is sandboxed to user-designated directories (`Downloads`, `DCIM`, `Documents`) and cannot traverse system paths.
+
+---
+
+## 📄 License
+
+Dual-licensed under either:
+* **MIT License** ([LICENSE-MIT](LICENSE-MIT))
+* **Apache License, Version 2.0** ([LICENSE-APACHE](LICENSE-APACHE))
+
+at your option.

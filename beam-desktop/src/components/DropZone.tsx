@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { UploadCloud, FolderUp, FileText, Image, Film, FileArchive, Plus, ArrowUpRight } from 'lucide-react';
+import { UploadCloud, FolderUp, FileText, Image, Film, FileArchive, Plus, ArrowUpRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { Device } from '../types';
 
 interface DropZoneProps {
@@ -52,83 +52,76 @@ export const DropZone: React.FC<DropZoneProps> = ({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`relative group rounded-3xl border-2 border-dashed transition-all duration-300 p-8 flex flex-col items-center justify-center text-center overflow-hidden ${
+        className={`relative group rounded-2xl border transition-all duration-200 p-10 flex flex-col items-center justify-center text-center overflow-hidden ${
           isDragOver
-            ? 'border-purple-400 bg-purple-950/20 scale-[1.01] shadow-2xl shadow-purple-500/20'
-            : 'border-white/10 hover:border-purple-500/40 bg-gradient-to-b from-white/[0.03] to-transparent hover:bg-white/[0.04]'
+            ? 'border-indigo-500/80 bg-indigo-500/[0.04] scale-[1.005] shadow-xl'
+            : 'border-white/[0.08] hover:border-white/[0.16] bg-white/[0.015] hover:bg-white/[0.03]'
         }`}
       >
-        {/* Glow ambient background light */}
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
-
-        {/* Hero animated icon */}
-        <div className="relative mb-5">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-purple-600/30 via-indigo-500/20 to-cyan-500/30 border border-purple-500/30 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-            <UploadCloud className="w-10 h-10 text-purple-300 group-hover:text-purple-200 transition-colors" />
+        {/* Minimalist icon container */}
+        <div className="mb-5 relative">
+          <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-300 group-hover:text-white transition-colors shadow-sm">
+            <UploadCloud className="w-6 h-6 stroke-[1.75]" />
           </div>
-          <span className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-indigo-600 text-white shadow-md">
-            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+          <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-md bg-indigo-600 text-white flex items-center justify-center shadow">
+            <Plus className="w-3 h-3 stroke-[2.5]" />
           </span>
         </div>
 
         {/* Heading & Subtext */}
-        <h3 className="text-xl font-bold text-white mb-2 tracking-tight">
-          Drop files or folders to beam instantly
+        <h3 className="text-lg font-semibold text-white mb-1.5 tracking-tight">
+          Drop files or folders to beam
         </h3>
-        <p className="text-sm text-slate-400 max-w-md mb-6 leading-relaxed">
-          Transfer any file type with zero loss: 50GB+ 4K video, RAW photos, documents, whole folders.
-          Verified with <span className="text-purple-300 font-semibold font-mono">BLAKE3</span>.
+        <p className="text-xs text-zinc-400 max-w-md mb-6 leading-relaxed">
+          Stream any file type or size directly. Zero recompression, exact timestamps, and cryptographic integrity check.
         </p>
 
         {/* Buttons Row */}
-        <div className="flex flex-wrap items-center justify-center gap-3 relative z-10">
+        <div className="flex flex-wrap items-center justify-center gap-2.5 relative z-10">
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center space-x-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-600/30 transition-all hover:scale-105 active:scale-95"
+            className="btn-primary flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             <span>Select Files</span>
           </button>
 
           <button
             onClick={() => folderInputRef.current?.click()}
-            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-200 bg-white/5 hover:bg-white/10 border border-white/10 transition-all hover:scale-105 active:scale-95"
+            className="btn-secondary flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs"
           >
-            <FolderUp className="w-4 h-4 text-purple-400" />
+            <FolderUp className="w-3.5 h-3.5 text-zinc-400" />
             <span>Select Folder</span>
           </button>
 
           {targetDevice && (
             <button
               onClick={onOpenExplorer}
-              className="flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-medium text-cyan-300 bg-cyan-950/30 hover:bg-cyan-900/40 border border-cyan-500/30 transition-all hover:scale-105 active:scale-95"
+              className="flex items-center space-x-1.5 px-4 py-2.5 rounded-xl text-xs font-medium text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 transition-all"
             >
-              <span>Browse {targetDevice.name}</span>
-              <ArrowUpRight className="w-4 h-4" />
+              <span>Explore {targetDevice.name}</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
         {/* Supported Types Badges */}
-        <div className="mt-8 flex items-center space-x-4 text-xs text-slate-400">
-          <div className="flex items-center space-x-1.5">
-            <Image className="w-3.5 h-3.5 text-purple-400" />
-            <span>RAW / HEIC / JPG</span>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-[11px] text-zinc-400 font-mono">
+          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/[0.05]">
+            <Image className="w-3 h-3 text-zinc-400" />
+            <span>RAW / DNG / HEIC</span>
           </div>
-          <span>•</span>
-          <div className="flex items-center space-x-1.5">
-            <Film className="w-3.5 h-3.5 text-indigo-400" />
-            <span>ProRes / 4K MP4</span>
+          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/[0.05]">
+            <Film className="w-3 h-3 text-zinc-400" />
+            <span>4K ProRes / MP4</span>
           </div>
-          <span>•</span>
-          <div className="flex items-center space-x-1.5">
-            <FileArchive className="w-3.5 h-3.5 text-cyan-400" />
-            <span>ZIP / APK</span>
+          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/[0.05]">
+            <FileArchive className="w-3 h-3 text-zinc-400" />
+            <span>APK / ZIP / ISO</span>
           </div>
-          <span>•</span>
-          <div className="flex items-center space-x-1.5">
-            <FileText className="w-3.5 h-3.5 text-emerald-400" />
-            <span>All Documents</span>
+          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/[0.05]">
+            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+            <span className="text-zinc-300">100% Lossless</span>
           </div>
         </div>
 

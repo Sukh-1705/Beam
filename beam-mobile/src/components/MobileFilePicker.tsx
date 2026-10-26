@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Image, Film, FileText, Check, Send, Sparkles, Folder, Plus, Trash2 } from 'lucide-react';
-import { MobileMediaItem } from '../types';
+import { X, Image, FileText, Send, Folder, Trash2, ShieldCheck, Film, Plus } from 'lucide-react';
 
 interface MobileFilePickerProps {
   isOpen: boolean;
@@ -9,36 +8,6 @@ interface MobileFilePickerProps {
   targetDeviceName: string;
 }
 
-const SAMPLE_MEDIA: MobileMediaItem[] = [
-  {
-    id: 'm1',
-    name: 'IMG_20261026_RAW_091.dng',
-    size: 48_200_000,
-    type: 'photo',
-    uri: 'content://media/external/images/media/1001',
-    mimeType: 'image/x-raw',
-    dateAdded: '10 mins ago',
-  },
-  {
-    id: 'm2',
-    name: 'DSC_4812_PRORES_4K.mov',
-    size: 680_000_000,
-    type: 'video',
-    uri: 'content://media/external/video/media/1002',
-    mimeType: 'video/quicktime',
-    dateAdded: '1 hour ago',
-  },
-  {
-    id: 'm3',
-    name: 'Project_Beam_Presentation.pdf',
-    size: 14_800_000,
-    type: 'doc',
-    uri: 'content://media/external/documents/1004',
-    mimeType: 'application/pdf',
-    dateAdded: 'Oct 24',
-  },
-];
-
 export const MobileFilePicker: React.FC<MobileFilePickerProps> = ({
   isOpen,
   onClose,
@@ -46,7 +15,6 @@ export const MobileFilePicker: React.FC<MobileFilePickerProps> = ({
   targetDeviceName,
 }) => {
   const [selectedRealFiles, setSelectedRealFiles] = useState<File[]>([]);
-  const [selectedSampleIds, setSelectedSampleIds] = useState<Set<string>>(new Set());
   const anyFileInputRef = useRef<HTMLInputElement>(null);
   const mediaFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -63,13 +31,6 @@ export const MobileFilePicker: React.FC<MobileFilePickerProps> = ({
     setSelectedRealFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const toggleSampleSelect = (id: string) => {
-    const next = new Set(selectedSampleIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedSampleIds(next);
-  };
-
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -78,34 +39,18 @@ export const MobileFilePicker: React.FC<MobileFilePickerProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
-  const totalRealBytes = selectedRealFiles.reduce((acc, f) => acc + f.size, 0);
-  const selectedSamples = SAMPLE_MEDIA.filter(s => selectedSampleIds.has(s.id));
-  const totalSampleBytes = selectedSamples.reduce((acc, s) => acc + s.size, 0);
-  const totalBytes = totalRealBytes + totalSampleBytes;
-  const totalCount = selectedRealFiles.length + selectedSamples.length;
+  const totalBytes = selectedRealFiles.reduce((acc, f) => acc + f.size, 0);
 
   const handleSend = () => {
-    let filesToSend: File[] = [...selectedRealFiles];
-
-    // If user also picked demo samples, turn them into mock File blobs
-    if (selectedSamples.length > 0) {
-      for (const s of selectedSamples) {
-        const dummyBlob = new Blob([new Uint8Array(1024 * 64)], { type: s.mimeType });
-        const mockFile = new File([dummyBlob], s.name, { type: s.mimeType });
-        filesToSend.push(mockFile);
-      }
-    }
-
-    if (filesToSend.length === 0) {
-      alert('Please select at least one file from your device.');
+    if (selectedRealFiles.length === 0) {
+      alert('Please select at least one file from your phone.');
       return;
     }
-
-    onSendRealFiles(filesToSend);
+    onSendRealFiles(selectedRealFiles);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
       {/* Hidden Native File Inputs */}
       <input
         type="file"
@@ -123,137 +68,108 @@ export const MobileFilePicker: React.FC<MobileFilePickerProps> = ({
         className="hidden"
       />
 
-      <div className="glass-panel w-full rounded-t-[32px] p-6 border-t border-white/10 shadow-2xl max-h-[85vh] flex flex-col">
+      <div className="surface-card w-full rounded-t-[28px] p-6 border-t border-white/10 shadow-2xl max-h-[85vh] flex flex-col">
         {/* Drag handle */}
-        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-4" />
+        <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4" />
 
         {/* Header */}
-        <div className="flex items-center justify-between pb-3">
+        <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
           <div>
-            <h3 className="text-lg font-bold text-white tracking-tight">Select Real Files to Beam</h3>
-            <p className="text-xs text-slate-400">
-              Direct transfer to <span className="text-purple-300 font-semibold">{targetDeviceName}</span>
+            <h3 className="text-base font-semibold text-white tracking-tight">Select Files to Beam</h3>
+            <p className="text-xs text-zinc-400">
+              Direct transfer to <span className="text-white font-medium">{targetDeviceName}</span>
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white bg-white/5 transition-colors"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Action Pickers (Browse Phone) */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        {/* Action Pickers (Browse Real Phone Storage) */}
+        <div className="grid grid-cols-2 gap-2.5 my-4">
           <button
             onClick={() => mediaFileInputRef.current?.click()}
-            className="p-3.5 rounded-2xl bg-gradient-to-br from-purple-600/30 to-indigo-600/20 border border-purple-500/30 hover:border-purple-400 flex flex-col items-center justify-center text-center transition-all active:scale-95 shadow-lg shadow-purple-500/10"
+            className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] flex flex-col items-center justify-center text-center transition-all active:scale-[0.98]"
           >
-            <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-300 mb-2">
-              <Image className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-300 mb-2">
+              <Image className="w-4 h-4" />
             </div>
-            <span className="text-xs font-bold text-white">Photos & Videos</span>
-            <span className="text-[10px] text-slate-400">Camera / Gallery</span>
+            <span className="text-xs font-semibold text-white">Photos & Videos</span>
+            <span className="text-[10px] text-zinc-400 mt-0.5">Original RAW & 4K</span>
           </button>
 
           <button
             onClick={() => anyFileInputRef.current?.click()}
-            className="p-3.5 rounded-2xl bg-gradient-to-br from-indigo-600/30 to-cyan-600/20 border border-indigo-500/30 hover:border-cyan-400 flex flex-col items-center justify-center text-center transition-all active:scale-95 shadow-lg shadow-cyan-500/10"
+            className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] flex flex-col items-center justify-center text-center transition-all active:scale-[0.98]"
           >
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-300 mb-2">
-              <Folder className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-300 mb-2">
+              <Folder className="w-4 h-4" />
             </div>
-            <span className="text-xs font-bold text-white">Any File / Storage</span>
-            <span className="text-[10px] text-slate-400">APKs, ZIPs, Docs</span>
+            <span className="text-xs font-semibold text-white">Files & Documents</span>
+            <span className="text-[10px] text-zinc-400 mt-0.5">APKs, ZIPs, PDFs</span>
           </button>
         </div>
 
         {/* Selected Real Files List */}
-        <div className="flex-1 overflow-y-auto space-y-2 mb-4 pr-1 min-h-[140px] max-h-[220px]">
+        <div className="flex-1 overflow-y-auto space-y-2 mb-4 pr-1 min-h-[120px] max-h-[240px]">
           {selectedRealFiles.length > 0 ? (
             selectedRealFiles.map((f, i) => (
               <div
                 key={`real-${i}`}
-                className="p-3 rounded-xl bg-white/5 border border-purple-500/30 flex items-center justify-between"
+                className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between"
               >
-                <div className="flex items-center space-x-3 overflow-hidden">
-                  <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-300 flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-4 h-4" />
+                <div className="flex items-center space-x-3 overflow-hidden pr-2">
+                  <div className="w-7 h-7 rounded-md bg-zinc-900 border border-white/10 text-zinc-300 flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-3.5 h-3.5" />
                   </div>
                   <div className="truncate">
-                    <p className="text-xs font-semibold text-white truncate">{f.name}</p>
-                    <p className="text-[10px] font-mono text-purple-300">{formatBytes(f.size)}</p>
+                    <p className="text-xs font-medium text-white truncate">{f.name}</p>
+                    <p className="text-[10px] font-mono text-zinc-400">{formatBytes(f.size)}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => removeRealFile(i)}
-                  className="p-1.5 text-slate-400 hover:text-red-400 transition-colors"
+                  className="p-1.5 text-zinc-400 hover:text-red-400 transition-colors"
+                  title="Remove file"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             ))
           ) : (
-            <div className="text-center py-6 text-slate-500 border border-dashed border-white/10 rounded-2xl">
-              <p className="text-xs">No files selected yet</p>
-              <p className="text-[10px] text-slate-600 mt-1">Tap a button above to choose real files from this device</p>
+            <div className="text-center py-8 text-zinc-400 border border-dashed border-white/[0.08] rounded-xl flex flex-col items-center justify-center">
+              <Folder className="w-6 h-6 text-zinc-600 mb-1.5" />
+              <p className="text-xs font-medium">No files selected</p>
+              <p className="text-[10px] text-zinc-500 mt-0.5">Tap above to select photos, videos, or documents</p>
             </div>
           )}
-
-          {/* Quick Demo Samples */}
-          <div className="pt-2">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-              Or quick test samples:
-            </p>
-            <div className="space-y-1.5">
-              {SAMPLE_MEDIA.map(s => {
-                const isSelected = selectedSampleIds.has(s.id);
-                return (
-                  <div
-                    key={s.id}
-                    onClick={() => toggleSampleSelect(s.id)}
-                    className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                      isSelected
-                        ? 'bg-purple-600/20 border-purple-500/40 text-white'
-                        : 'bg-white/[0.02] border-white/5 text-slate-400 hover:text-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-2.5 truncate">
-                      <div className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0">
-                        {s.type === 'photo' ? <Image className="w-3.5 h-3.5" /> : <Film className="w-3.5 h-3.5" />}
-                      </div>
-                      <span className="text-xs truncate">{s.name}</span>
-                    </div>
-                    <span className="text-[10px] font-mono text-slate-400">{formatBytes(s.size)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
         </div>
 
         {/* Footer Action Bar */}
-        <div className="pt-3 border-t border-white/5 flex items-center justify-between">
+        <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold text-white">
-              {totalCount} {totalCount === 1 ? 'file' : 'files'} selected
+            <p className="text-xs font-semibold text-white">
+              {selectedRealFiles.length} {selectedRealFiles.length === 1 ? 'file' : 'files'} selected
             </p>
-            <p className="text-[10px] font-mono text-purple-300">
-              {formatBytes(totalBytes)} · Lossless BLAKE3
+            <p className="text-[10px] font-mono text-zinc-400">
+              {formatBytes(totalBytes)} • Lossless
             </p>
           </div>
 
           <button
             onClick={handleSend}
-            disabled={totalCount === 0}
-            className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center space-x-2 transition-all shadow-lg ${
-              totalCount > 0
-                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:brightness-110 active:scale-95 shadow-purple-500/25'
-                : 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/5'
+            disabled={selectedRealFiles.length === 0}
+            className={`btn-primary px-5 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition-all ${
+              selectedRealFiles.length > 0
+                ? 'opacity-100'
+                : 'opacity-40 cursor-not-allowed'
             }`}
           >
             <span>Beam to PC</span>
-            <Send className="w-3.5 h-3.5" />
+            <Send className="w-3 h-3" />
           </button>
         </div>
       </div>

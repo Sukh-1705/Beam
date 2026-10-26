@@ -31,7 +31,8 @@ export interface MobileTransferProgress {
   totalBytes: number;
   speedMbps: number;
   percent: number;
-  status: 'connecting' | 'chunking' | 'transferring' | 'verifying' | 'completed' | 'corrupted_retry';
+  status: 'connecting' | 'chunking' | 'transferring' | 'verifying' | 'completed' | 'corrupted_retry' | 'failed';
   verifiedIdentical: boolean;
   blake3Hash: string;
+  errorMessage?: string;
 }

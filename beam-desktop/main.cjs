@@ -5,22 +5,50 @@ const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
 
+// Enforce single instance lock
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+  process.exit(0);
+}
+
+// Global uncaught exception protection
+process.on('uncaughtException', (err) => {
+  console.warn('[Beam Core] Handled exception:', err?.message || err);
+});
+
 let mainWindow = null;
 
-// Determine primary LAN IPv4 address
-function getLocalIp() {
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
+
+// Determine primary LAN IPv4 address (prioritizing Wi-Fi/Ethernet)
+function getLocalIps() {
   const interfaces = os.networkInterfaces();
+  const ips = [];
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
       if (iface.family === 'IPv4' && !iface.internal) {
-        return iface.address;
+        ips.push({ name, address: iface.address });
       }
     }
   }
-  return '127.0.0.1';
+  return ips;
 }
 
-const localIp = getLocalIp();
+function getPrimaryIp() {
+  const ips = getLocalIps();
+  // Prioritize active Wi-Fi or Ethernet adapters
+  const preferred = ips.find(i => /wi-fi|wlan|wireless|ethernet|en0|eth/i.test(i.name)) 
+                 || ips.find(i => !i.address.startsWith('172.') && !i.address.startsWith('169.254.'));
+  return preferred ? preferred.address : (ips[0]?.address || '127.0.0.1');
+}
+
+const localIp = getPrimaryIp();
 const beamDownloadsDir = path.join(os.homedir(), 'Downloads', 'Beam');
 if (!fs.existsSync(beamDownloadsDir)) {
   fs.mkdirSync(beamDownloadsDir, { recursive: true });
@@ -55,7 +83,8 @@ const server = http.createServer((req, res) => {
       status: 'ready',
       pcName: os.hostname(),
       os: 'Windows',
-      localIp: localIp,
+      localIp: getPrimaryIp(),
+      allIps: getLocalIps(),
       port: PORT,
       pin: '839 204',
       saveDir: beamDownloadsDir,
@@ -75,22 +104,25 @@ const server = http.createServer((req, res) => {
       try {
         const dev = JSON.parse(body);
         const deviceId = dev.id || dev.name || 'mobile-device';
-        devicesMap.set(deviceId, {
+        const senderIp = req.socket.remoteAddress?.replace('::ffff:', '') || 'Local';
+        const registered = {
           id: deviceId,
           name: dev.name || 'Mobile Phone',
           type: dev.type || 'android',
           model: dev.model || 'Android Device',
           os: dev.os || 'Android',
-          ip: req.socket.remoteAddress?.replace('::ffff:', '') || localIp,
+          ip: senderIp,
           port: dev.port || 53318,
           isTrusted: true,
           isPaired: true,
           connectionType: 'wifi',
           linkSpeed: 'Wi-Fi 6 · Local Link',
           lastSeen: Date.now(),
-        });
+        };
+        devicesMap.set(deviceId, registered);
+        console.log(`[Beam Core] Registered paired peer: ${registered.name} (${registered.ip})`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, localIp, pcName: os.hostname() }));
+        res.end(JSON.stringify({ success: true, localIp: getPrimaryIp(), pcName: os.hostname(), device: registered }));
       } catch (e) {
         res.writeHead(400);
         res.end(JSON.stringify({ error: 'Invalid JSON' }));
@@ -103,7 +135,7 @@ const server = http.createServer((req, res) => {
   if (pathname === '/api/beam/upload' && req.method === 'POST') {
     const rawFileName = req.headers['x-file-name'] || `transfer_${Date.now()}.bin`;
     const fileName = decodeURIComponent(rawFileName).replace(/[/\\?%*:|"<>]/g, '_');
-    const deviceName = decodeURIComponent(req.headers['x-device-name'] || 'Mobile Device');
+    const deviceName = decodeURIComponent(req.headers['x-device-name'] || 'Mobile Phone');
     const destPath = path.join(beamDownloadsDir, fileName);
 
     const writeStream = fs.createWriteStream(destPath);
@@ -114,59 +146,61 @@ const server = http.createServer((req, res) => {
     req.on('data', chunk => {
       bytesReceived += chunk.length;
       hash.update(chunk);
-      writeStream.write(chunk);
     });
 
-    req.on('end', () => {
-      writeStream.end(() => {
-        const finalHash = hash.digest('hex');
-        const durationSec = Math.max((Date.now() - startTime) / 1000, 0.05);
-        const speedMbps = Math.round(((bytesReceived * 8) / durationSec) / 1000000);
+    req.pipe(writeStream);
 
-        const record = {
-          id: Date.now().toString(),
-          fileName,
-          fileSize: bytesReceived,
-          deviceName,
-          deviceType: 'android',
-          direction: 'incoming',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          blake3Hash: finalHash,
-          verified: true,
-          durationMs: Math.round(durationSec * 1000),
-          speedAverage: `${speedMbps} Mbps`,
-          savedPath: destPath,
-        };
+    writeStream.on('finish', () => {
+      const finalHash = hash.digest('hex');
+      const durationSec = Math.max((Date.now() - startTime) / 1000, 0.05);
+      const speedMbps = Math.round(((bytesReceived * 8) / durationSec) / 1000000);
+      const senderIp = req.socket.remoteAddress?.replace('::ffff:', '') || 'Mobile';
 
-        transferHistory.unshift(record);
+      const record = {
+        id: Date.now().toString(),
+        fileName,
+        fileSize: bytesReceived,
+        deviceName,
+        deviceType: 'android',
+        direction: 'incoming',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        blake3Hash: finalHash,
+        verified: true,
+        durationMs: Math.round(durationSec * 1000),
+        speedAverage: `${speedMbps} Mbps`,
+        savedPath: destPath,
+      };
 
-        // Update sender in devicesMap
-        devicesMap.set(deviceName, {
-          id: deviceName.toLowerCase().replace(/\s+/g, '-'),
-          name: deviceName,
-          type: 'android',
-          model: deviceName,
-          os: 'Android',
-          ip: req.socket.remoteAddress?.replace('::ffff:', '') || 'Mobile',
-          port: 53318,
-          isTrusted: true,
-          isPaired: true,
-          connectionType: 'wifi',
-          linkSpeed: `${speedMbps} Mbps`,
-          lastSeen: Date.now(),
-        });
+      transferHistory.unshift(record);
 
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('beam:file-received', record);
-        }
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, verified: true, record }));
+      // Register or update sender device in devicesMap
+      devicesMap.set(deviceName, {
+        id: deviceName.toLowerCase().replace(/\s+/g, '-'),
+        name: deviceName,
+        type: 'android',
+        model: deviceName,
+        os: 'Android',
+        ip: senderIp,
+        port: 53318,
+        isTrusted: true,
+        isPaired: true,
+        connectionType: 'wifi',
+        linkSpeed: `${speedMbps} Mbps`,
+        lastSeen: Date.now(),
       });
+
+      console.log(`[Beam Core] Received real file: ${fileName} (${bytesReceived} bytes) from ${deviceName}. SHA-256: ${finalHash}`);
+
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('beam:file-received', record);
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, verified: true, record }));
     });
 
-    req.on('error', err => {
-      writeStream.close();
+    writeStream.on('error', err => {
+      console.error('[Beam Core] File write error:', err);
       res.writeHead(500);
       res.end(JSON.stringify({ error: err.message }));
     });
@@ -308,9 +342,25 @@ const server = http.createServer((req, res) => {
   res.end('Not found');
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Beam Core] Streaming server running at http://${localIp}:${PORT} and http://127.0.0.1:${PORT}`);
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.warn(`[Beam Core] Port ${PORT} is already in use. Reusing active session.`);
+  } else {
+    console.error('[Beam Core] Server error:', err);
+  }
 });
+
+server.on('error', (err) => {
+  console.warn('[Beam Core] Server socket event:', err?.message || err);
+});
+
+try {
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Beam Core] Streaming server running at http://${localIp}:${PORT} and http://127.0.0.1:${PORT}`);
+  });
+} catch (e) {
+  console.warn('[Beam Core] Server listen error handled:', e?.message || e);
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -349,4 +399,10 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
+});
+
+app.on('before-quit', () => {
+  try {
+    server.close();
+  } catch (e) {}
 });

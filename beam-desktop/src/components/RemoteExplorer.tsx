@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Folder, FileText, Image, Film, FileArchive, Download, ArrowLeft, RefreshCw, Smartphone } from 'lucide-react';
+import { X, Folder, FileText, Image, Film, FileArchive, Download, ArrowLeft, Smartphone } from 'lucide-react';
 import { Device, RemoteFileEntry } from '../types';
 
 interface RemoteExplorerProps {
@@ -62,7 +62,7 @@ export const RemoteExplorer: React.FC<RemoteExplorerProps> = ({
     setTimeout(() => {
       onDownloadFile(file);
       setDownloadingFile(null);
-    }, 800);
+    }, 700);
   };
 
   const formatBytes = (bytes: number) => {
@@ -74,65 +74,65 @@ export const RemoteExplorer: React.FC<RemoteExplorerProps> = ({
   };
 
   const getFileIcon = (file: RemoteFileEntry) => {
-    if (file.isDir) return <Folder className="w-5 h-5 text-amber-400 fill-amber-400/20" />;
-    if (file.mimeType.startsWith('image/')) return <Image className="w-5 h-5 text-purple-400" />;
-    if (file.mimeType.startsWith('video/')) return <Film className="w-5 h-5 text-indigo-400" />;
+    if (file.isDir) return <Folder className="w-4 h-4 text-amber-400" />;
+    if (file.mimeType.startsWith('image/')) return <Image className="w-4 h-4 text-zinc-300" />;
+    if (file.mimeType.startsWith('video/')) return <Film className="w-4 h-4 text-indigo-400" />;
     if (file.mimeType.includes('zip') || file.mimeType.includes('archive'))
-      return <FileArchive className="w-5 h-5 text-cyan-400" />;
-    return <FileText className="w-5 h-5 text-emerald-400" />;
+      return <FileArchive className="w-4 h-4 text-cyan-400" />;
+    return <FileText className="w-4 h-4 text-zinc-400" />;
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="glass-panel w-full max-w-3xl rounded-3xl p-6 border border-white/10 shadow-2xl relative flex flex-col h-[75vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
+      <div className="surface-card w-full max-w-3xl rounded-2xl p-6 border border-white/10 shadow-2xl relative flex flex-col h-[75vh]">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-white/5">
+        <div className="flex items-center justify-between pb-4 border-b border-white/[0.06]">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-              <Smartphone className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-300">
+              <Smartphone className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white tracking-tight">
+              <h3 className="text-sm font-semibold text-white tracking-tight">
                 Remote Storage · {device.name}
               </h3>
-              <p className="text-xs text-slate-400 font-mono">
+              <p className="text-xs text-zinc-400 font-mono">
                 Scoped Direct VFS • Path: /{currentPath || 'Root'}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Navigation Breadcrumbs */}
-        <div className="py-3 flex items-center space-x-2 text-xs text-slate-300">
+        <div className="py-2.5 flex items-center space-x-2 text-xs text-zinc-400 font-mono border-b border-white/[0.04]">
           {currentPath && (
             <button
               onClick={handleBack}
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors"
+              className="p-1 rounded bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 hover:text-white transition-colors"
               title="Go back"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-3.5 h-3.5" />
             </button>
           )}
           <span
             onClick={() => setCurrentPath('')}
-            className="cursor-pointer hover:text-purple-300 transition-colors font-semibold"
+            className="cursor-pointer hover:text-white transition-colors font-medium text-zinc-300"
           >
-            Storage
+            Root
           </span>
           {currentPath.split('/').filter(Boolean).map((part, idx, arr) => {
             const pathSoFar = arr.slice(0, idx + 1).join('/');
             return (
               <React.Fragment key={pathSoFar}>
-                <span className="text-slate-600">/</span>
+                <span className="text-zinc-600">/</span>
                 <span
                   onClick={() => setCurrentPath(pathSoFar)}
-                  className="cursor-pointer hover:text-purple-300 transition-colors font-medium text-slate-200"
+                  className="cursor-pointer hover:text-white transition-colors text-zinc-200"
                 >
                   {part}
                 </span>
@@ -142,11 +142,11 @@ export const RemoteExplorer: React.FC<RemoteExplorerProps> = ({
         </div>
 
         {/* Files Grid */}
-        <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+        <div className="flex-1 overflow-y-auto space-y-1.5 pt-3 pr-1">
           {entries.map((entry) => (
             <div
               key={entry.path}
-              className="p-3.5 rounded-2xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 hover:border-white/10 transition-colors flex items-center justify-between group"
+              className="p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04] hover:border-white/[0.08] transition-colors flex items-center justify-between group"
             >
               <div
                 onClick={() => entry.isDir && handleNavigate(entry.path)}
@@ -154,14 +154,14 @@ export const RemoteExplorer: React.FC<RemoteExplorerProps> = ({
                   entry.isDir ? 'cursor-pointer' : ''
                 }`}
               >
-                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-white/5 flex items-center justify-center shrink-0">
                   {getFileIcon(entry)}
                 </div>
                 <div className="truncate">
-                  <p className="text-sm font-semibold text-white truncate group-hover:text-purple-200 transition-colors">
+                  <p className="text-xs font-medium text-white truncate group-hover:text-zinc-100 transition-colors">
                     {entry.name}
                   </p>
-                  <p className="text-xs text-slate-400 font-mono">
+                  <p className="text-[10px] text-zinc-400 font-mono">
                     {formatBytes(entry.size)}
                   </p>
                 </div>
@@ -173,20 +173,20 @@ export const RemoteExplorer: React.FC<RemoteExplorerProps> = ({
                   <button
                     onClick={() => handleDownload(entry)}
                     disabled={downloadingFile === entry.name}
-                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-500/30 text-xs font-semibold transition-all hover:scale-105 active:scale-95"
+                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white text-zinc-300 hover:text-zinc-950 font-medium text-xs transition-all"
                   >
                     <Download className={`w-3.5 h-3.5 ${downloadingFile === entry.name ? 'animate-bounce' : ''}`} />
                     <span>{downloadingFile === entry.name ? 'Pulling...' : 'Download'}</span>
                   </button>
                 ) : (
-                  <span className="text-xs text-slate-500 font-mono mr-2">Folder</span>
+                  <span className="text-[11px] text-zinc-500 font-mono mr-2">Folder</span>
                 )}
               </div>
             </div>
           ))}
 
           {entries.length === 0 && (
-            <div className="text-center py-16 text-slate-500 text-sm">
+            <div className="text-center py-16 text-zinc-500 text-xs">
               Folder is empty
             </div>
           )}
